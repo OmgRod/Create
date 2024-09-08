@@ -1,253 +1,299 @@
 package com.simibubi.create.foundation.item;
 
-import static net.minecraft.ChatFormatting.DARK_GRAY;
-import static net.minecraft.ChatFormatting.GRAY;
-import static net.minecraft.ChatFormatting.WHITE;
+import static com.simibubi.create.foundation.item.TooltipHelper.cutString;
+import static net.minecraft.util.text.TextFormatting.AQUA;
+import static net.minecraft.util.text.TextFormatting.BLUE;
+import static net.minecraft.util.text.TextFormatting.DARK_GRAY;
+import static net.minecraft.util.text.TextFormatting.DARK_GREEN;
+import static net.minecraft.util.text.TextFormatting.DARK_PURPLE;
+import static net.minecraft.util.text.TextFormatting.DARK_RED;
+import static net.minecraft.util.text.TextFormatting.GOLD;
+import static net.minecraft.util.text.TextFormatting.GRAY;
+import static net.minecraft.util.text.TextFormatting.GREEN;
+import static net.minecraft.util.text.TextFormatting.LIGHT_PURPLE;
+import static net.minecraft.util.text.TextFormatting.RED;
+import static net.minecraft.util.text.TextFormatting.STRIKETHROUGH;
+import static net.minecraft.util.text.TextFormatting.WHITE;
+import static net.minecraft.util.text.TextFormatting.YELLOW;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 
-import org.apache.commons.lang3.tuple.Pair;
-import org.jetbrains.annotations.Nullable;
-
-import com.google.common.collect.ImmutableList;
-import com.simibubi.create.foundation.item.TooltipHelper.Palette;
-import com.simibubi.create.foundation.utility.Components;
+import com.simibubi.create.AllItems;
+import com.simibubi.create.config.AllConfigs;
+import com.simibubi.create.config.CKinetics;
 import com.simibubi.create.foundation.utility.Lang;
+import com.simibubi.create.modules.contraptions.base.IRotate;
+import com.simibubi.create.modules.contraptions.base.IRotate.SpeedLevel;
+import com.simibubi.create.modules.contraptions.base.IRotate.StressImpact;
+import com.simibubi.create.modules.contraptions.components.fan.EncasedFanBlock;
+import com.simibubi.create.modules.contraptions.components.flywheel.engine.EngineBlock;
+import com.simibubi.create.modules.contraptions.components.flywheel.engine.FurnaceEngineBlock;
+import com.simibubi.create.modules.contraptions.components.waterwheel.WaterWheelBlock;
 
+import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.resources.language.I18n;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.level.ItemLike;
-import net.minecraftforge.event.entity.player.ItemTooltipEvent;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.inventory.EquipmentSlotType;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.util.text.TextFormatting;
+import net.minecraftforge.common.ForgeConfigSpec.ConfigValue;
 
-public record ItemDescription(ImmutableList<Component> lines, ImmutableList<Component> linesOnShift, ImmutableList<Component> linesOnCtrl) {
-	private static final Map<Item, Supplier<String>> CUSTOM_TOOLTIP_KEYS = new IdentityHashMap<>();
+public class ItemDescription {
 
-	@Nullable
-	public static ItemDescription create(Item item, Palette palette) {
-		return create(getTooltipTranslationKey(item), palette);
+	public static final ItemDescription MISSING = new ItemDescription(null);
+	public static ITextComponent trim =
+		new StringTextComponent(WHITE + "" + STRIKETHROUGH + "                          ");
+
+	public enum Palette {
+
+		Blue(BLUE, AQUA),
+		Green(DARK_GREEN, GREEN),
+		Yellow(GOLD, YELLOW),
+		Red(DARK_RED, RED),
+		Purple(DARK_PURPLE, LIGHT_PURPLE),
+
+		;
+
+		private Palette(TextFormatting primary, TextFormatting highlight) {
+			color = primary;
+			hColor = highlight;
+		}
+
+		public TextFormatting color;
+		public TextFormatting hColor;
 	}
 
-	@Nullable
-	public static ItemDescription create(String translationKey, Palette palette) {
-		if (!canFillBuilder(translationKey + ".summary")) {
-			return null;
-		}
+	private List<ITextComponent> lines;
+	private List<ITextComponent> linesOnShift;
+	private List<ITextComponent> linesOnCtrl;
+	private Palette palette;
 
-		Builder builder = new Builder(palette);
-		fillBuilder(builder, translationKey);
-		return builder.build();
+	public ItemDescription(Palette palette) {
+		this.palette = palette;
+		lines = new ArrayList<>();
+		linesOnShift = new ArrayList<>();
+		linesOnCtrl = new ArrayList<>();
 	}
 
-	public static boolean canFillBuilder(String translationKey) {
-		return I18n.exists(translationKey);
+	public ItemDescription withSummary(String summary) {
+		add(linesOnShift, cutString(summary, palette.color, palette.hColor));
+		add(linesOnShift, "");
+		return this;
 	}
 
-	public static void fillBuilder(Builder builder, String translationKey) {
-		// Summary
-		String summaryKey = translationKey + ".summary";
-		if (I18n.exists(summaryKey)) {
-			builder.addSummary(I18n.get(summaryKey));
+	public ItemDescription withKineticStats(Block block) {
+
+		boolean isEngine = block instanceof EngineBlock;
+		CKinetics config = AllConfigs.SERVER.kinetics;
+		SpeedLevel minimumRequiredSpeedLevel =
+			isEngine ? SpeedLevel.NONE : ((IRotate) block).getMinimumRequiredSpeedLevel();
+		boolean hasSpeedRequirement = minimumRequiredSpeedLevel != SpeedLevel.NONE;
+		ResourceLocation id = ((Block) block).getRegistryName();
+		Map<ResourceLocation, ConfigValue<Double>> impacts = config.stressValues.impacts;
+		Map<ResourceLocation, ConfigValue<Double>> capacities = config.stressValues.capacities;
+		boolean hasStressImpact = impacts.containsKey(id) && impacts.get(id).get() > 0 && StressImpact.isEnabled();
+		boolean hasStressCapacity = capacities.containsKey(id) && StressImpact.isEnabled();
+		boolean hasGlasses =
+			AllItems.GOGGLES.typeOf(Minecraft.getInstance().player.getItemStackFromSlot(EquipmentSlotType.HEAD));
+
+		String rpmUnit = Lang.translate("generic.unit.rpm");
+		if (hasSpeedRequirement) {
+			List<String> speedLevels = Lang.translatedOptions("tooltip.speedRequirement", "none", "medium", "high");
+			int index = minimumRequiredSpeedLevel.ordinal();
+			String level =
+				minimumRequiredSpeedLevel.getTextColor() + makeProgressBar(3, index) + speedLevels.get(index);
+
+			if (hasGlasses)
+				level += " (" + minimumRequiredSpeedLevel.getSpeedValue() + rpmUnit + "+)";
+
+			add(linesOnShift, GRAY + Lang.translate("tooltip.speedRequirement"));
+			add(linesOnShift, level);
 		}
+		String stressUnit = Lang.translate("generic.unit.stress");
+		if (hasStressImpact && !(!isEngine && ((IRotate) block).hideStressImpact())) {
+			List<String> stressLevels = Lang.translatedOptions("tooltip.stressImpact", "low", "medium", "high");
+			double impact = impacts.get(id).get();
+			StressImpact impactId = impact >= config.highStressImpact.get() ? StressImpact.HIGH
+					: (impact >= config.mediumStressImpact.get() ? StressImpact.MEDIUM : StressImpact.LOW);
+			int index = impactId.ordinal();
+			String level = impactId.getAbsoluteColor() + makeProgressBar(3, index) + stressLevels.get(index);
 
-		// Behaviours
-		for (int i = 1; i < 100; i++) {
-			String conditionKey = translationKey + ".condition" + i;
-			String behaviourKey = translationKey + ".behaviour" + i;
-			if (!I18n.exists(conditionKey))
-				break;
-			builder.addBehaviour(I18n.get(conditionKey), I18n.get(behaviourKey));
+			if (hasGlasses)
+				level += " (" + impacts.get(id).get() + stressUnit + ")";
+
+			add(linesOnShift, GRAY + Lang.translate("tooltip.stressImpact"));
+			add(linesOnShift, level);
+
 		}
+		if (hasStressCapacity) {
+			List<String> stressCapacityLevels =
+				Lang.translatedOptions("tooltip.capacityProvided", "low", "medium", "high");
+			double capacity = capacities.get(id).get();
+			StressImpact impactId = capacity >= config.highCapacity.get() ? StressImpact.LOW
+					: (capacity >= config.mediumCapacity.get() ? StressImpact.MEDIUM : StressImpact.HIGH);
+			int index = StressImpact.values().length - 2 - impactId.ordinal();
+			String level = impactId.getAbsoluteColor() + makeProgressBar(3, index) + stressCapacityLevels.get(index);
 
-		// Actions
-		for (int i = 1; i < 100; i++) {
-			String controlKey = translationKey + ".control" + i;
-			String actionKey = translationKey + ".action" + i;
-			if (!I18n.exists(controlKey))
-				break;
-			builder.addAction(I18n.get(controlKey), I18n.get(actionKey));
-		}
-	}
+			if (hasGlasses)
+				level += " (" + capacity + stressUnit + ")";
+			if (!isEngine && ((IRotate) block).showCapacityWithAnnotation())
+				level +=
+					" " + DARK_GRAY + TextFormatting.ITALIC + Lang.translate("tooltip.capacityProvided.asGenerator");
 
-	public static void useKey(Item item, Supplier<String> supplier) {
-		CUSTOM_TOOLTIP_KEYS.put(item, supplier);
-	}
+			add(linesOnShift, GRAY + Lang.translate("tooltip.capacityProvided"));
+			add(linesOnShift, level);
 
-	public static void useKey(ItemLike item, String string) {
-		useKey(item.asItem(), () -> string);
-	}
-
-	public static void referKey(ItemLike item, Supplier<? extends ItemLike> otherItem) {
-		useKey(item.asItem(), () -> otherItem.get()
-			.asItem()
-			.getDescriptionId());
-	}
-
-	public static String getTooltipTranslationKey(Item item) {
-		if (CUSTOM_TOOLTIP_KEYS.containsKey(item)) {
-			return CUSTOM_TOOLTIP_KEYS.get(item).get() + ".tooltip";
-		}
-		return item.getDescriptionId() + ".tooltip";
-	}
-
-	public ImmutableList<Component> getCurrentLines() {
-		if (Screen.hasShiftDown()) {
-			return linesOnShift;
-		} else if (Screen.hasControlDown()) {
-			return linesOnCtrl;
-		} else {
-			return lines;
-		}
-	}
-
-	public static class Builder {
-		protected final Palette palette;
-		protected final List<String> summary = new ArrayList<>();
-		protected final List<Pair<String, String>> behaviours = new ArrayList<>();
-		protected final List<Pair<String, String>> actions = new ArrayList<>();
-
-		public Builder(Palette palette) {
-			this.palette = palette;
-		}
-
-		public Builder addSummary(String summaryLine) {
-			summary.add(summaryLine);
-			return this;
-		}
-
-		public Builder addBehaviour(String condition, String behaviour) {
-			behaviours.add(Pair.of(condition, behaviour));
-			return this;
-		}
-
-		public Builder addAction(String condition, String action) {
-			actions.add(Pair.of(condition, action));
-			return this;
-		}
-
-		public ItemDescription build() {
-			List<Component> lines = new ArrayList<>();
-			List<Component> linesOnShift = new ArrayList<>();
-			List<Component> linesOnCtrl = new ArrayList<>();
-
-			for (String summaryLine : summary) {
-				linesOnShift.addAll(TooltipHelper.cutStringTextComponent(summaryLine, palette));
+			String genSpeed = generatorSpeed(block, rpmUnit);
+			if (!genSpeed.equals("")) {
+				add(linesOnShift, GREEN + " " + genSpeed);
 			}
+		}
 
-			if (!behaviours.isEmpty()) {
-				linesOnShift.add(Components.immutableEmpty());
-			}
+		if (hasSpeedRequirement || hasStressImpact || hasStressCapacity)
+			add(linesOnShift, "");
+		return this;
+	}
 
-			for (Pair<String, String> behaviourPair : behaviours) {
-				String condition = behaviourPair.getLeft();
-				String behaviour = behaviourPair.getRight();
-				linesOnShift.add(Components.literal(condition).withStyle(GRAY));
-				linesOnShift.addAll(TooltipHelper.cutStringTextComponent(behaviour, palette.primary(), palette.highlight(), 1));
-			}
+	public static String makeProgressBar(int length, int filledLength) {
+		String bar = " ";
+		int emptySpaces = length - 1 - filledLength;
+		for (int i = 0; i <= filledLength; i++)
+			bar += "\u2588";
+		for (int i = 0; i < emptySpaces; i++)
+			bar += "\u2592";
+		return bar + " ";
+	}
 
-			for (Pair<String, String> actionPair : actions) {
-				String condition = actionPair.getLeft();
-				String action = actionPair.getRight();
-				linesOnCtrl.add(Components.literal(condition).withStyle(GRAY));
-				linesOnCtrl.addAll(TooltipHelper.cutStringTextComponent(action, palette.primary(), palette.highlight(), 1));
-			}
+	public ItemDescription withBehaviour(String condition, String behaviour) {
+		add(linesOnShift, GRAY + condition);
+		add(linesOnShift, cutString(behaviour, palette.color, palette.hColor, 1));
+		return this;
+	}
 
-			boolean hasDescription = !linesOnShift.isEmpty();
-			boolean hasControls = !linesOnCtrl.isEmpty();
+	public ItemDescription withControl(String condition, String action) {
+		add(linesOnCtrl, GRAY + condition);
+		add(linesOnCtrl, cutString(action, palette.color, palette.hColor, 1));
+		return this;
+	}
 
-			if (hasDescription || hasControls) {
-				String[] holdDesc = Lang.translateDirect("tooltip.holdForDescription", "$")
-					.getString()
-					.split("\\$");
-				String[] holdCtrl = Lang.translateDirect("tooltip.holdForControls", "$")
-					.getString()
-					.split("\\$");
-				MutableComponent keyShift = Lang.translateDirect("tooltip.keyShift");
-				MutableComponent keyCtrl = Lang.translateDirect("tooltip.keyCtrl");
-				for (List<Component> list : Arrays.asList(lines, linesOnShift, linesOnCtrl)) {
-					boolean shift = list == linesOnShift;
-					boolean ctrl = list == linesOnCtrl;
+	public ItemDescription createTabs() {
+		boolean hasDescription = !linesOnShift.isEmpty();
+		boolean hasControls = !linesOnCtrl.isEmpty();
 
-					if (holdDesc.length != 2 || holdCtrl.length != 2) {
-						list.add(0, Components.literal("Invalid lang formatting!"));
-						continue;
-					}
+		if (hasDescription || hasControls) {
+			String[] holdKey = Lang.translate("tooltip.holdKey", "$").split("\\$");
+			String[] holdKeyOrKey = Lang.translate("tooltip.holdKeyOrKey", "$", "$").split("\\$");
+			String keyShift = Lang.translate("tooltip.keyShift");
+			String keyCtrl = Lang.translate("tooltip.keyCtrl");
+			for (List<ITextComponent> list : Arrays.asList(lines, linesOnShift, linesOnCtrl)) {
+				boolean shift = list == linesOnShift;
+				boolean ctrl = list == linesOnCtrl;
 
-					if (hasControls) {
-						MutableComponent tabBuilder = Components.empty();
-						tabBuilder.append(Components.literal(holdCtrl[0]).withStyle(DARK_GRAY));
-						tabBuilder.append(keyCtrl.plainCopy()
-							.withStyle(ctrl ? WHITE : GRAY));
-						tabBuilder.append(Components.literal(holdCtrl[1]).withStyle(DARK_GRAY));
-						list.add(0, tabBuilder);
-					}
-
-					if (hasDescription) {
-						MutableComponent tabBuilder = Components.empty();
-						tabBuilder.append(Components.literal(holdDesc[0]).withStyle(DARK_GRAY));
-						tabBuilder.append(keyShift.plainCopy()
-							.withStyle(shift ? WHITE : GRAY));
-						tabBuilder.append(Components.literal(holdDesc[1]).withStyle(DARK_GRAY));
-						list.add(0, tabBuilder);
-					}
-
-					if (shift || ctrl)
-						list.add(hasDescription && hasControls ? 2 : 1, Components.immutableEmpty());
+				if (holdKey.length != 2 || holdKeyOrKey.length != 3) {
+					list.add(0, new StringTextComponent("Invalid lang formatting!"));
+					continue;
 				}
-			}
 
-			if (!hasDescription) {
-				linesOnCtrl.clear();
-				linesOnShift.addAll(lines);
-			}
-			if (!hasControls) {
-				linesOnCtrl.clear();
-				linesOnCtrl.addAll(lines);
-			}
+				StringBuilder tabBuilder = new StringBuilder();
+				tabBuilder.append(DARK_GRAY);
+				if (hasDescription && hasControls) {
+					tabBuilder.append(holdKeyOrKey[0]);
+					tabBuilder.append(shift ? palette.hColor : palette.color);
+					tabBuilder.append(keyShift);
+					tabBuilder.append(DARK_GRAY);
+					tabBuilder.append(holdKeyOrKey[1]);
+					tabBuilder.append(ctrl ? palette.hColor : palette.color);
+					tabBuilder.append(keyCtrl);
+					tabBuilder.append(DARK_GRAY);
+					tabBuilder.append(holdKeyOrKey[2]);
 
-			return new ItemDescription(ImmutableList.copyOf(lines), ImmutableList.copyOf(linesOnShift), ImmutableList.copyOf(linesOnCtrl));
+				} else {
+					tabBuilder.append(holdKey[0]);
+					tabBuilder.append((hasDescription ? shift : ctrl) ? palette.hColor : palette.color);
+					tabBuilder.append(hasDescription ? keyShift : keyCtrl);
+					tabBuilder.append(DARK_GRAY);
+					tabBuilder.append(holdKey[1]);
+				}
+
+				list.add(0, new StringTextComponent(tabBuilder.toString()));
+				if (shift || ctrl)
+					list.add(1, new StringTextComponent(""));
+			}
 		}
+
+		if (!hasDescription)
+			linesOnShift = lines;
+		if (!hasControls)
+			linesOnCtrl = lines;
+
+		return this;
 	}
 
-	public static class Modifier implements TooltipModifier {
-		protected final Item item;
-		protected final Palette palette;
-		protected String cachedLanguage;
-		protected ItemDescription description;
-
-		public Modifier(Item item, Palette palette) {
-			this.item = item;
-			this.palette = palette;
-		}
-
-		@Override
-		public void modify(ItemTooltipEvent context) {
-			if (checkLocale()) {
-				description = create(item, palette);
-			}
-			if (description == null) {
-				return;
-			}
-			context.getToolTip().addAll(1, description.getCurrentLines());
-		}
-
-		protected boolean checkLocale() {
-			String currentLanguage = Minecraft.getInstance()
-				.getLanguageManager()
-				.getSelected();
-			if (!currentLanguage.equals(cachedLanguage)) {
-				cachedLanguage = currentLanguage;
-				return true;
-			}
-			return false;
-		}
+	public static String hightlight(String s, Palette palette) {
+		return palette.hColor + s + palette.color;
 	}
+
+	public static void add(List<ITextComponent> infoList, List<String> textLines) {
+		textLines.forEach(s -> add(infoList, s));
+	}
+
+	public static void add(List<ITextComponent> infoList, String line) {
+		infoList.add(new StringTextComponent(line));
+	}
+
+	public Palette getPalette() {
+		return palette;
+	}
+
+	public List<ITextComponent> addInformation(List<ITextComponent> tooltip) {
+		if (Screen.hasShiftDown()) {
+			tooltip.addAll(linesOnShift);
+			return tooltip;
+		}
+
+		if (Screen.hasControlDown()) {
+			tooltip.addAll(linesOnCtrl);
+			return tooltip;
+		}
+
+		tooltip.addAll(lines);
+		return tooltip;
+	}
+
+	public List<ITextComponent> getLines() {
+		return lines;
+	}
+
+	public List<ITextComponent> getLinesOnCtrl() {
+		return linesOnCtrl;
+	}
+
+	public List<ITextComponent> getLinesOnShift() {
+		return linesOnShift;
+	}
+
+	private String generatorSpeed(Block block, String unitRPM) {
+		String value = "";
+
+		if (block instanceof WaterWheelBlock) {
+			int baseSpeed = AllConfigs.SERVER.kinetics.waterWheelSpeed.get();
+			value = baseSpeed + "-" + (baseSpeed * 3);
+		}
+
+		else if (block instanceof EncasedFanBlock)
+			value = AllConfigs.SERVER.kinetics.generatingFanSpeed.get().toString();
+
+		else if (block instanceof FurnaceEngineBlock) {
+			int baseSpeed = AllConfigs.SERVER.kinetics.furnaceEngineSpeed.get();
+			value = baseSpeed + "-" + (baseSpeed * 2);
+		}
+
+		return !value.equals("") ? Lang.translate("tooltip.generationSpeed", value, unitRPM) : "";
+	}
+
 }

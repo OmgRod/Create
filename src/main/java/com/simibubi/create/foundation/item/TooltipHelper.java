@@ -1,161 +1,189 @@
 package com.simibubi.create.foundation.item;
 
-import java.text.BreakIterator;
+import static net.minecraft.util.text.TextFormatting.DARK_GRAY;
+
 import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-import com.google.common.base.Strings;
-import com.simibubi.create.foundation.utility.Components;
-import com.simibubi.create.foundation.utility.Couple;
+import com.mojang.bridge.game.Language;
+import com.simibubi.create.AllItems;
+import com.simibubi.create.foundation.item.ItemDescription.Palette;
 import com.simibubi.create.foundation.utility.Lang;
+import com.simibubi.create.modules.IModule;
+import com.simibubi.create.modules.contraptions.base.IRotate;
+import com.simibubi.create.modules.contraptions.components.flywheel.engine.EngineBlock;
+import com.simibubi.create.modules.curiosities.tools.AllToolTiers;
+import com.simibubi.create.modules.curiosities.tools.SandPaperItem;
 
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.Style;
+import net.minecraft.client.entity.player.ClientPlayerEntity;
+import net.minecraft.client.resources.I18n;
+import net.minecraft.inventory.EquipmentSlotType;
+import net.minecraft.item.BlockItem;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.TieredItem;
+import net.minecraft.util.text.TextFormatting;
 
 public class TooltipHelper {
 
-	public static final int MAX_WIDTH_PER_LINE = 200;
+	public static final int maxCharsPerLine = 35;
+	public static final Map<String, ItemDescription> cachedTooltips = new HashMap<>();
+	public static Language cachedLanguage;
+	private static boolean gogglesMode;
 
-	public static MutableComponent holdShift(Palette palette, boolean highlighted) {
-		return Lang.translateDirect("tooltip.holdForDescription", Lang.translateDirect("tooltip.keyShift")
-			.withStyle(ChatFormatting.GRAY))
-			.withStyle(ChatFormatting.DARK_GRAY);
+	public static String holdShift(Palette color, boolean highlighted) {
+		TextFormatting colorFormat = highlighted ? color.hColor : color.color;
+		return DARK_GRAY
+				+ Lang.translate("tooltip.holdKey", colorFormat + Lang.translate("tooltip.keyShift") + DARK_GRAY);
 	}
 
-	public static void addHint(List<Component> tooltip, String hintKey, Object... messageParams) {
-		Lang.translate(hintKey + ".title").style(ChatFormatting.GOLD).forGoggles(tooltip);
-		Component hint = Lang.translateDirect(hintKey);
-		List<Component> cutComponent = cutTextComponent(hint, Palette.GRAY_AND_WHITE);
-		for (Component component : cutComponent)
-			Lang.builder().add(component).forGoggles(tooltip);
+	public static List<String> cutString(String s, TextFormatting defaultColor, TextFormatting highlightColor) {
+		return cutString(s, defaultColor, highlightColor, 0);
 	}
 
-	public static String makeProgressBar(int length, int filledLength) {
-		String bar = " ";
-		int emptySpaces = length - filledLength;
-		for (int i = 0; i < filledLength; i++)
-			bar += "\u2588";
-		for (int i = 0; i < emptySpaces; i++)
-			bar += "\u2592";
-		return bar + " ";
-	}
+	public static List<String> cutString(String s, TextFormatting defaultColor, TextFormatting highlightColor,
+			int indent) {
+		String lineStart = defaultColor.toString();
+		for (int i = 0; i < indent; i++)
+			lineStart += " ";
 
-	public static Style styleFromColor(ChatFormatting color) {
-		return Style.EMPTY.applyFormat(color);
-	}
+		// Apply markup
+		String markedUp = s.replaceAll("_([^_]+)_", highlightColor + "$1" + defaultColor);
 
-	public static Style styleFromColor(int hex) {
-		return Style.EMPTY.withColor(hex);
-	}
-
-	public static List<Component> cutStringTextComponent(String s, Palette palette) {
-		return cutTextComponent(Components.literal(s), palette);
-	}
-
-	public static List<Component> cutTextComponent(Component c, Palette palette) {
-		return cutTextComponent(c, palette.primary(), palette.highlight());
-	}
-
-	public static List<Component> cutStringTextComponent(String s, Style primaryStyle,
-		Style highlightStyle) {
-		return cutTextComponent(Components.literal(s), primaryStyle, highlightStyle);
-	}
-
-	public static List<Component> cutTextComponent(Component c, Style primaryStyle,
-		Style highlightStyle) {
-		return cutTextComponent(c, primaryStyle, highlightStyle, 0);
-	}
-
-	public static List<Component> cutStringTextComponent(String c, Style primaryStyle,
-		Style highlightStyle, int indent) {
-		return cutTextComponent(Components.literal(c), primaryStyle, highlightStyle, indent);
-	}
-
-	public static List<Component> cutTextComponent(Component c, Style primaryStyle,
-		Style highlightStyle, int indent) {
-		String s = c.getString();
-
-		// Split words
-		List<String> words = new LinkedList<>();
-		BreakIterator iterator = BreakIterator.getLineInstance(Minecraft.getInstance().getLocale());
-		iterator.setText(s);
-		int start = iterator.first();
-		for (int end = iterator.next(); end != BreakIterator.DONE; start = end, end = iterator.next()) {
-			String word = s.substring(start, end);
-			words.add(word);
-		}
+		String[] words = markedUp.split(" ");
+		List<String> lines = new ArrayList<>();
+		StringBuilder currentLine = new StringBuilder(lineStart);
+		String word;
+		boolean firstWord = true;
+		boolean lastWord;
 
 		// Apply hard wrap
-		Font font = Minecraft.getInstance().font;
-		List<String> lines = new LinkedList<>();
-		StringBuilder currentLine = new StringBuilder();
-		int width = 0;
-		for (String word : words) {
-			int newWidth = font.width(word.replaceAll("_", ""));
-			if (width + newWidth > MAX_WIDTH_PER_LINE) {
-				if (width > 0) {
-					String line = currentLine.toString();
-					lines.add(line);
-					currentLine = new StringBuilder();
-					width = 0;
-				} else {
-					lines.add(word);
-					continue;
-				}
+		for (int i = 0; i < words.length; i++) {
+			word = words[i];
+			lastWord = i == words.length - 1;
+
+			if (!lastWord && !firstWord && currentLine.length() + word.length() > maxCharsPerLine) {
+				lines.add(currentLine.toString());
+				currentLine = new StringBuilder(lineStart);
+				firstWord = true;
 			}
-			currentLine.append(word);
-			width += newWidth;
+
+			currentLine.append((firstWord ? "" : " ") + word);
+			firstWord = false;
 		}
-		if (width > 0) {
+
+		if (!firstWord) {
 			lines.add(currentLine.toString());
 		}
 
-		// Format
-		MutableComponent lineStart = Components.literal(Strings.repeat(" ", indent));
-		lineStart.withStyle(primaryStyle);
-		List<Component> formattedLines = new ArrayList<>(lines.size());
-		Couple<Style> styles = Couple.create(highlightStyle, primaryStyle);
-
-		boolean currentlyHighlighted = false;
-		for (String string : lines) {
-			MutableComponent currentComponent = lineStart.plainCopy();
-			String[] split = string.split("_");
-			for (String part : split) {
-				currentComponent.append(Components.literal(part).withStyle(styles.get(currentlyHighlighted)));
-				currentlyHighlighted = !currentlyHighlighted;
-			}
-
-			formattedLines.add(currentComponent);
-			currentlyHighlighted = !currentlyHighlighted;
-		}
-
-		return formattedLines;
+		return lines;
 	}
 
-	public record Palette(Style primary, Style highlight) {
-		public static final Palette STANDARD_CREATE = new Palette(styleFromColor(0xC9974C), styleFromColor(0xF1DD79));
-
-		public static final Palette BLUE = ofColors(ChatFormatting.BLUE, ChatFormatting.AQUA);
-		public static final Palette GREEN = ofColors(ChatFormatting.DARK_GREEN, ChatFormatting.GREEN);
-		public static final Palette YELLOW = ofColors(ChatFormatting.GOLD, ChatFormatting.YELLOW);
-		public static final Palette RED = ofColors(ChatFormatting.DARK_RED, ChatFormatting.RED);
-		public static final Palette PURPLE = ofColors(ChatFormatting.DARK_PURPLE, ChatFormatting.LIGHT_PURPLE);
-		public static final Palette GRAY = ofColors(ChatFormatting.DARK_GRAY, ChatFormatting.GRAY);
-
-		public static final Palette ALL_GRAY = ofColors(ChatFormatting.GRAY, ChatFormatting.GRAY);
-		public static final Palette GRAY_AND_BLUE = ofColors(ChatFormatting.GRAY, ChatFormatting.BLUE);
-		public static final Palette GRAY_AND_WHITE = ofColors(ChatFormatting.GRAY, ChatFormatting.WHITE);
-		public static final Palette GRAY_AND_GOLD = ofColors(ChatFormatting.GRAY, ChatFormatting.GOLD);
-		public static final Palette GRAY_AND_RED = ofColors(ChatFormatting.GRAY, ChatFormatting.RED);
-
-		public static Palette ofColors(ChatFormatting primary, ChatFormatting highlight) {
-			return new Palette(styleFromColor(primary), styleFromColor(highlight));
+	private static void checkLocale() {
+		Language currentLanguage = Minecraft.getInstance().getLanguageManager().getCurrentLanguage();
+		if (cachedLanguage != currentLanguage) {
+			cachedTooltips.clear();
+			cachedLanguage = currentLanguage;
 		}
+	}
+
+	public static boolean hasTooltip(ItemStack stack) {
+		checkLocale();
+
+		ClientPlayerEntity player = Minecraft.getInstance().player;
+		boolean hasGlasses =
+			player != null && AllItems.GOGGLES.typeOf(player.getItemStackFromSlot(EquipmentSlotType.HEAD));
+
+		if (hasGlasses != gogglesMode) {
+			gogglesMode = hasGlasses;
+			cachedTooltips.clear();
+		}
+
+		String key = getTooltipTranslationKey(stack);
+		if (cachedTooltips.containsKey(key))
+			return cachedTooltips.get(key) != ItemDescription.MISSING;
+		return findTooltip(stack);
+	}
+
+	public static ItemDescription getTooltip(ItemStack stack) {
+		checkLocale();
+		String key = getTooltipTranslationKey(stack);
+		if (cachedTooltips.containsKey(key)) {
+			ItemDescription itemDescription = cachedTooltips.get(key);
+			if (itemDescription != ItemDescription.MISSING)
+				return itemDescription;
+		}
+		return null;
+	}
+
+	private static boolean findTooltip(ItemStack stack) {
+		String key = getTooltipTranslationKey(stack);
+		if (I18n.hasKey(key)) {
+			cachedTooltips.put(key, buildToolTip(key, stack));
+			return true;
+		}
+		cachedTooltips.put(key, ItemDescription.MISSING);
+		return false;
+	}
+
+	private static ItemDescription buildToolTip(String translationKey, ItemStack stack) {
+		IModule module = IModule.of(stack);
+		if (I18n.format(translationKey).equals("WIP"))
+			return new WipScription(module.getToolTipColor());
+
+		ItemDescription tooltip = new ItemDescription(module.getToolTipColor());
+		String summaryKey = translationKey + ".summary";
+
+		// Summary
+		if (I18n.hasKey(summaryKey))
+			tooltip = tooltip.withSummary(I18n.format(summaryKey));
+
+		// Requirements
+		if (stack.getItem() instanceof BlockItem) {
+			BlockItem item = (BlockItem) stack.getItem();
+			if (item.getBlock() instanceof IRotate || item.getBlock() instanceof EngineBlock) {
+				tooltip = tooltip.withKineticStats(item.getBlock());
+			}
+		}
+
+		// Behaviours
+		for (int i = 1; i < 100; i++) {
+			String conditionKey = translationKey + ".condition" + i;
+			String behaviourKey = translationKey + ".behaviour" + i;
+			if (!I18n.hasKey(conditionKey))
+				break;
+			tooltip.withBehaviour(I18n.format(conditionKey), I18n.format(behaviourKey));
+		}
+
+		// Controls
+		for (int i = 1; i < 100; i++) {
+			String controlKey = translationKey + ".control" + i;
+			String actionKey = translationKey + ".action" + i;
+			if (!I18n.hasKey(controlKey))
+				break;
+			tooltip.withControl(I18n.format(controlKey), I18n.format(actionKey));
+		}
+
+		return tooltip.createTabs();
+	}
+
+	public static String getTooltipTranslationKey(ItemStack stack) {
+		Item item = stack.getItem();
+		if (item instanceof TieredItem) {
+			TieredItem tieredItem = (TieredItem) stack.getItem();
+			if (tieredItem.getTier() instanceof AllToolTiers) {
+				AllToolTiers allToolTiers = (AllToolTiers) tieredItem.getTier();
+				return "tool.create." + Lang.asId(allToolTiers.name()) + ".tooltip";
+			}
+		}
+
+		if (stack.getItem() instanceof SandPaperItem)
+			return "tool.create.sand_paper.tooltip";
+
+		return stack.getItem().getTranslationKey(stack) + ".tooltip";
 	}
 
 }

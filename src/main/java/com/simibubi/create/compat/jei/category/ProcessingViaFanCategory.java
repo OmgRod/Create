@@ -1,138 +1,99 @@
 package com.simibubi.create.compat.jei.category;
 
-import java.util.List;
-import java.util.function.Supplier;
+import java.util.Arrays;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.simibubi.create.AllBlockPartials;
 import com.simibubi.create.AllBlocks;
-import com.simibubi.create.AllPartialModels;
+import com.simibubi.create.ScreenResources;
 import com.simibubi.create.compat.jei.category.animations.AnimatedKinetics;
-import com.simibubi.create.content.processing.recipe.ProcessingOutput;
-import com.simibubi.create.content.processing.recipe.ProcessingRecipe;
-import com.simibubi.create.foundation.gui.AllGuiTextures;
-import com.simibubi.create.foundation.utility.Lang;
+import com.simibubi.create.foundation.gui.ScreenElementRenderer;
 
-import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
-import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
-import mezz.jei.api.recipe.IFocusGroup;
-import mezz.jei.api.recipe.RecipeIngredientRole;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Recipe;
+import mezz.jei.api.constants.VanillaTypes;
+import mezz.jei.api.gui.IRecipeLayout;
+import mezz.jei.api.gui.drawable.IDrawable;
+import mezz.jei.api.gui.ingredient.IGuiItemStackGroup;
+import mezz.jei.api.ingredients.IIngredients;
+import net.minecraft.block.BlockState;
+import net.minecraft.client.renderer.model.IBakedModel;
+import net.minecraft.item.crafting.IRecipe;
+import net.minecraft.state.properties.BlockStateProperties;
+import net.minecraft.util.Direction;
 
-@ParametersAreNonnullByDefault
-public abstract class ProcessingViaFanCategory<T extends Recipe<?>> extends CreateRecipeCategory<T> {
+public abstract class ProcessingViaFanCategory<T extends IRecipe<?>> extends CreateRecipeCategory<T> {
 
-	protected static final int SCALE = 24;
-
-	public ProcessingViaFanCategory(Info<T> info) {
-		super(info);
+	public ProcessingViaFanCategory(String name, IDrawable icon) {
+		super(name, icon, emptyBackground(177, 70));
 	}
-
-	public static Supplier<ItemStack> getFan(String name) {
-		return () -> AllBlocks.ENCASED_FAN.asStack()
-			.setHoverName(Lang.translateDirect("recipe." + name + ".fan").withStyle(style -> style.withItalic(false)));
+	
+	@Override
+	public void setIngredients(T recipe, IIngredients ingredients) {
+		ingredients.setInputIngredients(recipe.getIngredients());
+		ingredients.setOutput(VanillaTypes.ITEM, recipe.getRecipeOutput());
 	}
 
 	@Override
-	public void setRecipe(IRecipeLayoutBuilder builder, T recipe, IFocusGroup focuses) {
-		builder
-				.addSlot(RecipeIngredientRole.INPUT, 21, 48)
-				.setBackground(getRenderedSlot(), -1, -1)
-				.addIngredients(recipe.getIngredients().get(0));
-		builder
-				.addSlot(RecipeIngredientRole.OUTPUT, 141, 48)
-				.setBackground(getRenderedSlot(), -1, -1)
-				.addItemStack(getResultItem(recipe));
+	public void setRecipe(IRecipeLayout recipeLayout, T recipe, IIngredients ingredients) {
+		IGuiItemStackGroup itemStacks = recipeLayout.getItemStacks();
+		itemStacks.init(0, true, 20, 47);
+		itemStacks.set(0, Arrays.asList(recipe.getIngredients().get(0).getMatchingStacks()));
+
+		itemStacks.init(1, false, 139, 47);
+		itemStacks.set(1, recipe.getRecipeOutput());
+	}
+
+	protected void renderWidgets(T recipe, double mouseX, double mouseY) {
+		ScreenResources.JEI_SLOT.draw(20, 47);
+		ScreenResources.JEI_SLOT.draw(139, 47);
+		ScreenResources.JEI_SHADOW.draw(47, 29);
+		ScreenResources.JEI_LIGHT.draw(66, 39);
+		ScreenResources.JEI_LONG_ARROW.draw(53, 51);
 	}
 
 	@Override
-	public void draw(T recipe, IRecipeSlotsView iRecipeSlotsView, GuiGraphics graphics, double mouseX, double mouseY) {
-		renderWidgets(graphics, recipe, mouseX, mouseY);
+	public void draw(T recipe, double mouseX, double mouseY) {
+		renderWidgets(recipe, mouseX, mouseY);
+
+		GlStateManager.pushMatrix();
+		GlStateManager.color3f(1, 1, 1);
+		GlStateManager.enableDepthTest();
+
+		GlStateManager.translated(28, 18, 0);
+		GlStateManager.rotated(10.5, -1f, 0, 0);
+		GlStateManager.rotated(15.5, 0, 1, 0);
+		GlStateManager.scaled(.6f, .6f, .6f);
+		ScreenElementRenderer.renderBlock(this::renderFanCasing);
 		
-		PoseStack matrixStack = graphics.pose();
+		GlStateManager.pushMatrix();
+		float angle = AnimatedKinetics.getCurrentAngle() * 12;
+		float t = 25;
+		GlStateManager.translatef(t, -t, t);
+		GlStateManager.rotated(angle, 0, 0, 1);
+		GlStateManager.translatef(-t, t, -t);
+		
+		GlStateManager.translatef(t, 0, 175);
+		GlStateManager.rotated(90, 0, 1, 0);
+		GlStateManager.translatef(-t, 0, -175);
+		
+		ScreenElementRenderer.renderModel(this::renderFanInner);
+		GlStateManager.popMatrix();
 
-		matrixStack.pushPose();
-		translateFan(matrixStack);
-		matrixStack.mulPose(Axis.XP.rotationDegrees(-12.5f));
-		matrixStack.mulPose(Axis.YP.rotationDegrees(22.5f));
+		GlStateManager.translated(-10, 0, 95);
+		GlStateManager.rotated(7, 0, 1, 0);
+		renderAttachedBlock();
 
-		AnimatedKinetics.defaultBlockElement(AllPartialModels.ENCASED_FAN_INNER)
-			.rotateBlock(180, 0, AnimatedKinetics.getCurrentAngle() * 16)
-			.scale(SCALE)
-			.render(graphics);
-
-		AnimatedKinetics.defaultBlockElement(AllBlocks.ENCASED_FAN.getDefaultState())
-			.rotateBlock(0, 180, 0)
-			.atLocal(0, 0, 0)
-			.scale(SCALE)
-			.render(graphics);
-
-		renderAttachedBlock(graphics);
-		matrixStack.popPose();
-	}
-
-	protected void renderWidgets(GuiGraphics graphics, T recipe, double mouseX, double mouseY) {
-		AllGuiTextures.JEI_SHADOW.render(graphics, 46, 29);
-		getBlockShadow().render(graphics, 65, 39);
-		AllGuiTextures.JEI_LONG_ARROW.render(graphics, 54, 51);
-	}
-
-	protected AllGuiTextures getBlockShadow() {
-		return AllGuiTextures.JEI_SHADOW;
-	}
-
-	protected void translateFan(PoseStack matrixStack) {
-		matrixStack.translate(56, 33, 0);
-	}
-
-	protected abstract void renderAttachedBlock(GuiGraphics graphics);
-
-	public static abstract class MultiOutput<T extends ProcessingRecipe<?>> extends ProcessingViaFanCategory<T> {
-
-		public MultiOutput(Info<T> info) {
-			super(info);
-		}
-
-		@Override
-		public void setRecipe(IRecipeLayoutBuilder builder, T recipe, IFocusGroup focuses) {
-			List<ProcessingOutput> results = recipe.getRollableResults();
-			int xOffsetAmount = 1 - Math.min(3, results.size());
-
-			builder
-					.addSlot(RecipeIngredientRole.INPUT, 5 * xOffsetAmount + 21, 48)
-					.setBackground(getRenderedSlot(), -1, -1)
-					.addIngredients(recipe.getIngredients().get(0));
-
-			int i = 0;
-			boolean excessive = results.size() > 9;
-			for (ProcessingOutput output : results) {
-				int xOffset = (i % 3) * 19 + 9 * xOffsetAmount;
-				int yOffset = (i / 3) * -19 + (excessive ? 8 : 0);
-
-				builder
-						.addSlot(RecipeIngredientRole.OUTPUT, 141 + xOffset, 48 + yOffset)
-						.setBackground(getRenderedSlot(output), -1, -1)
-						.addItemStack(output.getStack())
-						.addTooltipCallback(addStochasticTooltip(output));
-				i++;
-			}
-		}
-
-		@Override
-		protected void renderWidgets(GuiGraphics graphics, T recipe, double mouseX, double mouseY) {
-			int size = recipe.getRollableResultsAsItemStacks().size();
-			int xOffsetAmount = 1 - Math.min(3, size);
-
-			AllGuiTextures.JEI_SHADOW.render(graphics, 46, 29);
-			getBlockShadow().render(graphics, 65, 39);
-			AllGuiTextures.JEI_LONG_ARROW.render(graphics, 7 * xOffsetAmount + 54, 51);
-
-		}
+		GlStateManager.popMatrix();
 
 	}
+
+	protected BlockState renderFanCasing() {
+		return AllBlocks.ENCASED_FAN.get().getDefaultState().with(BlockStateProperties.FACING, Direction.WEST);
+	}
+
+	protected IBakedModel renderFanInner() {
+		return AllBlockPartials.ENCASED_FAN_INNER.get();
+	}
+
+	public abstract void renderAttachedBlock();
 
 }

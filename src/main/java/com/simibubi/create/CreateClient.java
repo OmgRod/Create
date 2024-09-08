@@ -1,124 +1,162 @@
 package com.simibubi.create;
 
-import com.simibubi.create.content.contraptions.glue.SuperGlueSelectionHandler;
-import com.simibubi.create.content.contraptions.render.ContraptionRenderInfo;
-import com.simibubi.create.content.contraptions.render.ContraptionRenderInfoManager;
-import com.simibubi.create.content.decoration.encasing.CasingConnectivity;
-import com.simibubi.create.content.equipment.bell.SoulPulseEffectHandler;
-import com.simibubi.create.content.equipment.potatoCannon.PotatoCannonRenderHandler;
-import com.simibubi.create.content.equipment.zapper.ZapperRenderHandler;
-import com.simibubi.create.content.kinetics.base.KineticBlockEntityRenderer;
-import com.simibubi.create.content.kinetics.waterwheel.WaterWheelRenderer;
-import com.simibubi.create.content.schematics.client.ClientSchematicLoader;
-import com.simibubi.create.content.schematics.client.SchematicAndQuillHandler;
-import com.simibubi.create.content.schematics.client.SchematicHandler;
-import com.simibubi.create.content.trains.GlobalRailwayManager;
-import com.simibubi.create.foundation.ClientResourceReloadListener;
-import com.simibubi.create.foundation.blockEntity.behaviour.ValueSettingsClient;
-import com.simibubi.create.foundation.gui.UIRenderHelper;
-import com.simibubi.create.foundation.outliner.Outliner;
-import com.simibubi.create.foundation.ponder.element.WorldSectionElement;
-import com.simibubi.create.foundation.render.AllInstanceTypes;
-import com.simibubi.create.foundation.render.CachedBufferer;
-import com.simibubi.create.foundation.render.StitchedSprite;
-import com.simibubi.create.foundation.render.SuperByteBufferCache;
-import com.simibubi.create.foundation.utility.Components;
-import com.simibubi.create.foundation.utility.ModelSwapper;
-import com.simibubi.create.foundation.utility.ghost.GhostBlocks;
-import com.simibubi.create.infrastructure.config.AllConfigs;
-import com.simibubi.create.infrastructure.ponder.AllPonderTags;
-import com.simibubi.create.infrastructure.ponder.PonderIndex;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
-import net.minecraft.ChatFormatting;
-import net.minecraft.client.GraphicsStatus;
+import com.simibubi.create.foundation.block.IHaveCustomBlockModel;
+import com.simibubi.create.foundation.block.connected.IHaveConnectedTextures;
+import com.simibubi.create.foundation.block.render.SpriteShiftEntry;
+import com.simibubi.create.foundation.item.IHaveCustomItemModel;
+import com.simibubi.create.foundation.utility.SuperByteBufferCache;
+import com.simibubi.create.modules.contraptions.base.KineticTileEntityRenderer;
+import com.simibubi.create.modules.contraptions.components.contraptions.ChassisRangeDisplay;
+import com.simibubi.create.modules.contraptions.components.contraptions.ContraptionRenderer;
+import com.simibubi.create.modules.schematics.ClientSchematicLoader;
+import com.simibubi.create.modules.schematics.client.SchematicAndQuillHandler;
+import com.simibubi.create.modules.schematics.client.SchematicHandler;
+
+import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.ClickEvent;
-import net.minecraft.network.chat.ComponentUtils;
-import net.minecraft.network.chat.HoverEvent;
-import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.client.renderer.BlockModelShapes;
+import net.minecraft.client.renderer.model.IBakedModel;
+import net.minecraft.client.renderer.model.ModelResourceLocation;
+import net.minecraft.resources.IReloadableResourceManager;
+import net.minecraft.resources.IResourceManager;
+import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.client.event.ModelBakeEvent;
+import net.minecraftforge.client.event.ModelRegistryEvent;
+import net.minecraftforge.client.event.TextureStitchEvent;
+import net.minecraftforge.client.model.ModelLoader;
 import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 
 public class CreateClient {
 
-	public static final SuperByteBufferCache BUFFER_CACHE = new SuperByteBufferCache();
-	public static final Outliner OUTLINER = new Outliner();
-	public static final GhostBlocks GHOST_BLOCKS = new GhostBlocks();
-	public static final ModelSwapper MODEL_SWAPPER = new ModelSwapper();
-	public static final CasingConnectivity CASING_CONNECTIVITY = new CasingConnectivity();
+	public static ClientSchematicLoader schematicSender;
+	public static SchematicHandler schematicHandler;
+	public static SchematicAndQuillHandler schematicAndQuillHandler;
+	public static SuperByteBufferCache bufferCache;
 
-	public static final ClientSchematicLoader SCHEMATIC_SENDER = new ClientSchematicLoader();
-	public static final SchematicHandler SCHEMATIC_HANDLER = new SchematicHandler();
-	public static final SchematicAndQuillHandler SCHEMATIC_AND_QUILL_HANDLER = new SchematicAndQuillHandler();
-	public static final SuperGlueSelectionHandler GLUE_HANDLER = new SuperGlueSelectionHandler();
-
-	public static final ZapperRenderHandler ZAPPER_RENDER_HANDLER = new ZapperRenderHandler();
-	public static final PotatoCannonRenderHandler POTATO_CANNON_RENDER_HANDLER = new PotatoCannonRenderHandler();
-	public static final SoulPulseEffectHandler SOUL_PULSE_EFFECT_HANDLER = new SoulPulseEffectHandler();
-	public static final GlobalRailwayManager RAILWAYS = new GlobalRailwayManager();
-	public static final ValueSettingsClient VALUE_SETTINGS_HANDLER = new ValueSettingsClient();
-
-	public static final ClientResourceReloadListener RESOURCE_RELOAD_LISTENER = new ClientResourceReloadListener();
-
-	public static void onCtorClient(IEventBus modEventBus, IEventBus forgeEventBus) {
-		modEventBus.addListener(CreateClient::clientInit);
-		modEventBus.addListener(AllParticleTypes::registerFactories);
-
-		modEventBus.addListener(StitchedSprite::onTextureStitchPost);
-
-		AllInstanceTypes.init();
-
-		MODEL_SWAPPER.registerListeners(modEventBus);
-
-		ZAPPER_RENDER_HANDLER.registerListeners(forgeEventBus);
-		POTATO_CANNON_RENDER_HANDLER.registerListeners(forgeEventBus);
+	public static void addListeners(IEventBus modEventBus) {
+		DistExecutor.runWhenOn(Dist.CLIENT, () -> () -> {
+			modEventBus.addListener(CreateClient::clientInit);
+			modEventBus.addListener(CreateClient::onModelBake);
+			modEventBus.addListener(CreateClient::onModelRegistry);
+			modEventBus.addListener(CreateClient::onTextureStitch);
+			modEventBus.addListener(AllParticles::registerFactories);
+		});
 	}
 
-	public static void clientInit(final FMLClientSetupEvent event) {
-		BUFFER_CACHE.registerCompartment(CachedBufferer.GENERIC_BLOCK);
-		BUFFER_CACHE.registerCompartment(CachedBufferer.PARTIAL);
-		BUFFER_CACHE.registerCompartment(CachedBufferer.DIRECTIONAL_PARTIAL);
-		BUFFER_CACHE.registerCompartment(KineticBlockEntityRenderer.KINETIC_BLOCK);
-		BUFFER_CACHE.registerCompartment(WaterWheelRenderer.WATER_WHEEL);
-		BUFFER_CACHE.registerCompartment(ContraptionRenderInfo.CONTRAPTION, 20);
-		BUFFER_CACHE.registerCompartment(WorldSectionElement.DOC_WORLD_SECTION, 20);
+	public static void clientInit(FMLClientSetupEvent event) {
+		schematicSender = new ClientSchematicLoader();
+		schematicHandler = new SchematicHandler();
+		schematicAndQuillHandler = new SchematicAndQuillHandler();
 
-		AllPartialModels.init();
+		bufferCache = new SuperByteBufferCache();
+		bufferCache.registerCompartment(KineticTileEntityRenderer.KINETIC_TILE);
+		bufferCache.registerCompartment(ContraptionRenderer.CONTRAPTION, 20);
 
-		AllPonderTags.register();
-		PonderIndex.register();
+		AllKeys.register();
+		AllContainers.registerScreenFactories();
+		AllTileEntities.registerRenderers();
+		AllItems.registerColorHandlers();
+		AllBlocks.registerColorHandlers();
+		AllEntities.registerRenderers();
 
-		UIRenderHelper.init();
+		IResourceManager resourceManager = Minecraft.getInstance().getResourceManager();
+		if (resourceManager instanceof IReloadableResourceManager)
+			((IReloadableResourceManager) resourceManager).addReloadListener(new ResourceReloadHandler());
 	}
 
-	public static void invalidateRenderers() {
-		BUFFER_CACHE.invalidate();
-
-		SCHEMATIC_HANDLER.updateRenderers();
-		ContraptionRenderInfoManager.resetAll();
+	public static void gameTick() {
+		schematicSender.tick();
+		schematicAndQuillHandler.tick();
+		schematicHandler.tick();
+		ChassisRangeDisplay.clientTick();
 	}
 
-	public static void checkGraphicsFanciness() {
-		Minecraft mc = Minecraft.getInstance();
-		if (mc.player == null)
+	@OnlyIn(Dist.CLIENT)
+	public static void onTextureStitch(TextureStitchEvent.Pre event) {
+		if (!event.getMap().getBasePath().equals("textures"))
 			return;
 
-		if (mc.options.graphicsMode().get() != GraphicsStatus.FABULOUS)
-			return;
+		event.addSprite(new ResourceLocation(Create.ID, "block/belt_animated"));
+		for (AllBlocks allBlocks : AllBlocks.values()) {
+			Block block = allBlocks.get();
+			if (block instanceof IHaveConnectedTextures)
+				for (SpriteShiftEntry spriteShiftEntry : ((IHaveConnectedTextures) block).getBehaviour()
+						.getAllCTShifts())
+					event.addSprite(spriteShiftEntry.getTargetResourceLocation());
+		}
+	}
 
-		if (AllConfigs.client().ignoreFabulousWarning.get())
-			return;
+	@OnlyIn(Dist.CLIENT)
+	public static void onModelBake(ModelBakeEvent event) {
+		Map<ResourceLocation, IBakedModel> modelRegistry = event.getModelRegistry();
+		AllBlockPartials.onModelBake(event);
 
-		MutableComponent text = ComponentUtils.wrapInSquareBrackets(Components.literal("WARN"))
-			.withStyle(ChatFormatting.GOLD)
-			.append(Components.literal(
-				" Some of Create's visual features will not be available while Fabulous graphics are enabled!"))
-			.withStyle(style -> style
-				.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/create dismissFabulousWarning"))
-				.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-					Components.literal("Click here to disable this warning"))));
+		for (AllBlocks allBlocks : AllBlocks.values()) {
+			Block block = allBlocks.get();
+			if (block instanceof IHaveCustomBlockModel)
+				swapModels(modelRegistry, getAllBlockStateModelLocations(allBlocks),
+						((IHaveCustomBlockModel) block)::createModel);
+		}
 
-		mc.player.displayClientMessage(text, false);
+		for (AllItems item : AllItems.values()) {
+			if (item.get() instanceof IHaveCustomItemModel)
+				swapModels(modelRegistry, getItemModelLocation(item),
+						m -> ((IHaveCustomItemModel) item.get()).createModel(m).loadPartials(event));
+		}
+	}
+
+	@OnlyIn(Dist.CLIENT)
+	public static void onModelRegistry(ModelRegistryEvent event) {
+		AllBlockPartials.onModelRegistry(event);
+
+		// Register submodels for custom rendered item models
+		for (AllItems item : AllItems.values()) {
+			if (item.get() instanceof IHaveCustomItemModel)
+				((IHaveCustomItemModel) item.get()).createModel(null).getModelLocations()
+						.forEach(ModelLoader::addSpecialModel);
+		}
+	}
+
+	@OnlyIn(Dist.CLIENT)
+	protected static ModelResourceLocation getItemModelLocation(AllItems item) {
+		return new ModelResourceLocation(item.get().getRegistryName(), "inventory");
+	}
+
+	@OnlyIn(Dist.CLIENT)
+	protected static List<ModelResourceLocation> getAllBlockStateModelLocations(AllBlocks block) {
+		List<ModelResourceLocation> models = new ArrayList<>();
+		block.get().getStateContainer().getValidStates().forEach(state -> {
+			models.add(getBlockModelLocation(block, BlockModelShapes.getPropertyMapString(state.getValues())));
+		});
+		return models;
+	}
+
+	@OnlyIn(Dist.CLIENT)
+	protected static ModelResourceLocation getBlockModelLocation(AllBlocks block, String suffix) {
+		return new ModelResourceLocation(block.get().getRegistryName(), suffix);
+	}
+
+	@OnlyIn(Dist.CLIENT)
+	protected static <T extends IBakedModel> void swapModels(Map<ResourceLocation, IBakedModel> modelRegistry,
+			ModelResourceLocation location, Function<IBakedModel, T> factory) {
+		modelRegistry.put(location, factory.apply(modelRegistry.get(location)));
+	}
+
+	@OnlyIn(Dist.CLIENT)
+	protected static <T extends IBakedModel> void swapModels(Map<ResourceLocation, IBakedModel> modelRegistry,
+			List<ModelResourceLocation> locations, Function<IBakedModel, T> factory) {
+		locations.forEach(location -> {
+			swapModels(modelRegistry, location, factory);
+		});
 	}
 
 }

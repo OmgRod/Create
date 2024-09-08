@@ -2,27 +2,19 @@ package com.simibubi.create;
 
 import org.lwjgl.glfw.GLFW;
 
-import com.mojang.blaze3d.platform.InputConstants;
-
-import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.settings.KeyBinding;
+import net.minecraftforge.fml.client.registry.ClientRegistry;
 
-@EventBusSubscriber(value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
 public enum AllKeys {
 
-	TOOL_MENU("toolmenu", GLFW.GLFW_KEY_LEFT_ALT),
+	TOOL_MENU("toolmenu", GLFW.GLFW_KEY_LEFT_ALT), 
 	ACTIVATE_TOOL("", GLFW.GLFW_KEY_LEFT_CONTROL),
-	TOOLBELT("toolbelt", GLFW.GLFW_KEY_LEFT_ALT),
-	PONDER("ponder", GLFW.GLFW_KEY_W)
 
 	;
 
-	private KeyMapping keybind;
+	private KeyBinding keybind;
 	private String description;
 	private int key;
 	private boolean modifiable;
@@ -33,48 +25,36 @@ public enum AllKeys {
 		this.modifiable = !description.isEmpty();
 	}
 
-	@SubscribeEvent
-	public static void register(RegisterKeyMappingsEvent event) {
+	public static void register() {
 		for (AllKeys key : values()) {
-			key.keybind = new KeyMapping(key.description, key.key, Create.NAME);
+			key.keybind = new KeyBinding(key.description, key.key, Create.NAME);
 			if (!key.modifiable)
 				continue;
 
-			event.register(key.keybind);
+			ClientRegistry.registerKeyBinding(key.keybind);
 		}
 	}
 
-	public KeyMapping getKeybind() {
+	public KeyBinding getKeybind() {
 		return keybind;
 	}
 
 	public boolean isPressed() {
 		if (!modifiable)
 			return isKeyDown(key);
-		return keybind.isDown();
+		return keybind.isKeyDown();
 	}
 
 	public String getBoundKey() {
-		return keybind.getTranslatedKeyMessage()
-			.getString()
-			.toUpperCase();
+		return keybind.getLocalizedName().toUpperCase();
 	}
 
 	public int getBoundCode() {
-		return keybind.getKey()
-			.getValue();
+		return keybind.getKey().getKeyCode();
 	}
 
 	public static boolean isKeyDown(int key) {
-		return InputConstants.isKeyDown(Minecraft.getInstance()
-			.getWindow()
-			.getWindow(), key);
-	}
-
-	public static boolean isMouseButtonDown(int button) {
-		return GLFW.glfwGetMouseButton(Minecraft.getInstance()
-			.getWindow()
-			.getWindow(), button) == 1;
+		return GLFW.glfwGetKey(Minecraft.getInstance().mainWindow.getHandle(), key) != 0;
 	}
 
 	public static boolean ctrlDown() {

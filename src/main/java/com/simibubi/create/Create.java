@@ -1,58 +1,33 @@
 package com.simibubi.create;
 
-import java.util.Random;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import org.slf4j.Logger;
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.mojang.logging.LogUtils;
-import com.simibubi.create.api.behaviour.BlockSpoutingBehaviour;
-import com.simibubi.create.compat.Mods;
-import com.simibubi.create.compat.computercraft.ComputerCraftProxy;
-import com.simibubi.create.compat.curios.Curios;
-import com.simibubi.create.content.contraptions.ContraptionMovementSetting;
-import com.simibubi.create.content.decoration.palettes.AllPaletteBlocks;
-import com.simibubi.create.content.equipment.potatoCannon.BuiltinPotatoProjectileTypes;
-import com.simibubi.create.content.fluids.tank.BoilerHeaters;
-import com.simibubi.create.content.kinetics.TorquePropagator;
-import com.simibubi.create.content.kinetics.fan.processing.AllFanProcessingTypes;
-import com.simibubi.create.content.kinetics.mechanicalArm.AllArmInteractionPointTypes;
-import com.simibubi.create.content.redstone.displayLink.AllDisplayBehaviours;
-import com.simibubi.create.content.redstone.link.RedstoneLinkNetworkHandler;
-import com.simibubi.create.content.schematics.ServerSchematicLoader;
-import com.simibubi.create.content.trains.GlobalRailwayManager;
-import com.simibubi.create.content.trains.bogey.BogeySizes;
-import com.simibubi.create.content.trains.track.AllPortalTracks;
-import com.simibubi.create.foundation.advancement.AllAdvancements;
+import com.simibubi.create.config.AllConfigs;
 import com.simibubi.create.foundation.advancement.AllTriggers;
-import com.simibubi.create.foundation.block.CopperRegistries;
-import com.simibubi.create.foundation.data.CreateRegistrate;
-import com.simibubi.create.foundation.item.ItemDescription;
-import com.simibubi.create.foundation.item.KineticStats;
-import com.simibubi.create.foundation.item.TooltipHelper.Palette;
-import com.simibubi.create.foundation.item.TooltipModifier;
-import com.simibubi.create.foundation.utility.AttachedRegistry;
-import com.simibubi.create.infrastructure.command.ServerLagger;
-import com.simibubi.create.infrastructure.config.AllConfigs;
-import com.simibubi.create.infrastructure.data.CreateDatagen;
-import com.simibubi.create.infrastructure.worldgen.AllFeatures;
-import com.simibubi.create.infrastructure.worldgen.AllPlacementModifiers;
+import com.simibubi.create.foundation.command.CreateCommand;
+import com.simibubi.create.foundation.command.ServerLagger;
+import com.simibubi.create.foundation.world.AllWorldFeatures;
+import com.simibubi.create.modules.ModuleLoadedCondition;
+import com.simibubi.create.modules.contraptions.TorquePropagator;
+import com.simibubi.create.modules.logistics.RedstoneLinkNetworkHandler;
+import com.simibubi.create.modules.schematics.ServerSchematicLoader;
 
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.item.CreativeModeTab;
-import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.common.ForgeMod;
+import net.minecraft.block.Block;
+import net.minecraft.entity.EntityType;
+import net.minecraft.inventory.container.ContainerType;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemGroup;
+import net.minecraft.item.crafting.IRecipeSerializer;
+import net.minecraft.particles.ParticleType;
+import net.minecraft.tileentity.TileEntityType;
+import net.minecraft.util.SoundEvent;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.common.crafting.CraftingHelper;
 import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.event.server.FMLServerStartingEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 @Mod(Create.ID)
@@ -60,119 +35,62 @@ public class Create {
 
 	public static final String ID = "create";
 	public static final String NAME = "Create";
-	public static final String VERSION = "0.5.2-experimental";
+	public static final String VERSION = "0.1.1b";
 
-	public static final Logger LOGGER = LogUtils.getLogger();
-
-	public static final Gson GSON = new GsonBuilder().setPrettyPrinting()
-		.disableHtmlEscaping()
-		.create();
-
-	/** Use the {@link Random} of a local {@link Level} or {@link Entity} or create one */
-	@Deprecated
-	public static final Random RANDOM = new Random();
-
-	/**
-	 * <b>Other mods should not use this field!</b> If you are an addon developer, create your own instance of
-	 * {@link CreateRegistrate}.
-	 */
-	public static final CreateRegistrate REGISTRATE = CreateRegistrate.create(ID)
-		.defaultCreativeTab((ResourceKey<CreativeModeTab>) null);
-
-	static {
-		REGISTRATE.setTooltipModifierFactory(item -> {
-			return new ItemDescription.Modifier(item, Palette.STANDARD_CREATE)
-				.andThen(TooltipModifier.mapNull(KineticStats.create(item)));
-		});
-	}
-
-	public static final ServerSchematicLoader SCHEMATIC_RECEIVER = new ServerSchematicLoader();
-	public static final RedstoneLinkNetworkHandler REDSTONE_LINK_NETWORK_HANDLER = new RedstoneLinkNetworkHandler();
-	public static final TorquePropagator TORQUE_PROPAGATOR = new TorquePropagator();
-	public static final GlobalRailwayManager RAILWAYS = new GlobalRailwayManager();
-	public static final ServerLagger LAGGER = new ServerLagger();
+	public static Logger logger = LogManager.getLogger();
+	public static ItemGroup creativeTab = new CreateItemGroup();
+	public static ServerSchematicLoader schematicReceiver;
+	public static RedstoneLinkNetworkHandler redstoneLinkNetworkHandler;
+	public static TorquePropagator torquePropagator;
+	public static ServerLagger lagger;
 
 	public Create() {
-		onCtor();
-	}
-
-	public static void onCtor() {
-		ModLoadingContext modLoadingContext = ModLoadingContext.get();
-
-		IEventBus modEventBus = FMLJavaModLoadingContext.get()
-			.getModEventBus();
-		IEventBus forgeEventBus = MinecraftForge.EVENT_BUS;
-
-		REGISTRATE.registerEventListeners(modEventBus);
-
-		AllSoundEvents.prepare();
-		AllTags.init();
-		AllCreativeModeTabs.register(modEventBus);
-		AllBlocks.register();
-		AllItems.register();
-		AllFluids.register();
-		AllPaletteBlocks.register();
-		AllMenuTypes.register();
-		AllEntityTypes.register();
-		AllBlockEntityTypes.register();
-		AllEnchantments.register();
-		AllRecipeTypes.register(modEventBus);
-		AllParticleTypes.register(modEventBus);
-		AllStructureProcessorTypes.register(modEventBus);
-		AllEntityDataSerializers.register(modEventBus);
-		AllPackets.registerPackets();
-		AllFeatures.register(modEventBus);
-		AllPlacementModifiers.register(modEventBus);
-
-		AllConfigs.register(modLoadingContext);
-
-		// FIXME: some of these registrations are not thread-safe
-		AllMovementBehaviours.registerDefaults();
-		AllInteractionBehaviours.registerDefaults();
-		AllPortalTracks.registerDefaults();
-		AllDisplayBehaviours.registerDefaults();
-		ContraptionMovementSetting.registerDefaults();
-		AllArmInteractionPointTypes.register();
-		AllFanProcessingTypes.register();
-		BlockSpoutingBehaviour.registerDefaults();
-		BogeySizes.init();
-		AllBogeyStyles.register();
-		// ----
-
-		ComputerCraftProxy.register();
-
-		ForgeMod.enableMilkFluid();
-		CopperRegistries.inject();
-
+		IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 		modEventBus.addListener(Create::init);
-		modEventBus.addListener(EventPriority.LOWEST, CreateDatagen::gatherData);
-		modEventBus.addListener(AllSoundEvents::register);
 
-		DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> CreateClient.onCtorClient(modEventBus, forgeEventBus));
+		MinecraftForge.EVENT_BUS.addListener(Create::serverStarting);
 
-		// FIXME: this is not thread-safe
-		Mods.CURIOS.executeIfInstalled(() -> () -> Curios.init(modEventBus, forgeEventBus));
+		modEventBus.addGenericListener(Block.class, AllBlocks::register);
+		modEventBus.addGenericListener(Item.class, AllItems::register);
+		modEventBus.addGenericListener(IRecipeSerializer.class, AllRecipes::register);
+		modEventBus.addGenericListener(TileEntityType.class, AllTileEntities::register);
+		modEventBus.addGenericListener(ContainerType.class, AllContainers::register);
+		modEventBus.addGenericListener(EntityType.class, AllEntities::register);
+		modEventBus.addGenericListener(ParticleType.class, AllParticles::register);
+		modEventBus.addGenericListener(SoundEvent.class, AllSoundEvents::register);
+
+		AllConfigs.registerAll();
+		modEventBus.addListener(AllConfigs::onLoad);
+		modEventBus.addListener(AllConfigs::onReload);
+		CreateClient.addListeners(modEventBus);
+		AllWorldFeatures.reload();
 	}
 
 	public static void init(final FMLCommonSetupEvent event) {
-		AllFluids.registerFluidInteractions();
+		schematicReceiver = new ServerSchematicLoader();
+		redstoneLinkNetworkHandler = new RedstoneLinkNetworkHandler();
+		torquePropagator = new TorquePropagator();
+		lagger = new ServerLagger();
 
-		event.enqueueWork(() -> {
-			// TODO: custom registration should all happen in one place
-			// Most registration happens in the constructor.
-			// These registrations use Create's registered objects directly so they must run after registration has finished.
-			BuiltinPotatoProjectileTypes.register();
-			BoilerHeaters.registerDefaults();
-			// --
-
-			AttachedRegistry.unwrapAll();
-			AllAdvancements.register();
-			AllTriggers.register();
-		});
+		CraftingHelper.register(new ModuleLoadedCondition.Serializer());
+		AllPackets.registerPackets();
+		AllTriggers.register();
 	}
 
-	public static ResourceLocation asResource(String path) {
-		return new ResourceLocation(ID, path);
+	public static void serverStarting(FMLServerStartingEvent event) {
+		new CreateCommand(event.getCommandDispatcher());
+	}
+
+	public static void tick() {
+		if (schematicReceiver == null)
+			schematicReceiver = new ServerSchematicLoader();
+		schematicReceiver.tick();
+
+		lagger.tick();
+	}
+
+	public static void shutdown() {
+		schematicReceiver.shutdown();
 	}
 
 }

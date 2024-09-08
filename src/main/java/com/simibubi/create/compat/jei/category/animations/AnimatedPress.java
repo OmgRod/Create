@@ -1,65 +1,101 @@
 package com.simibubi.create.compat.jei.category.animations;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
-import com.simibubi.create.AllBlocks;
-import com.simibubi.create.AllPartialModels;
-import com.simibubi.create.foundation.utility.AnimationTickHolder;
+import static com.simibubi.create.foundation.utility.AnimationTickHolder.ticks;
 
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.core.Direction;
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.simibubi.create.AllBlockPartials;
+import com.simibubi.create.AllBlocks;
+import com.simibubi.create.foundation.gui.ScreenElementRenderer;
+
+import net.minecraft.block.BlockState;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.model.IBakedModel;
+import net.minecraft.state.properties.BlockStateProperties;
+import net.minecraft.util.Direction;
+import net.minecraft.util.Direction.Axis;
 
 public class AnimatedPress extends AnimatedKinetics {
 
 	private boolean basin;
-
+	
 	public AnimatedPress(boolean basin) {
 		this.basin = basin;
 	}
-
+	
 	@Override
-	public void draw(GuiGraphics graphics, int xOffset, int yOffset) {
-		PoseStack matrixStack = graphics.pose();
-		matrixStack.pushPose();
-		matrixStack.translate(xOffset, yOffset, 200);
-		matrixStack.mulPose(Axis.XP.rotationDegrees(-15.5f));
-		matrixStack.mulPose(Axis.YP.rotationDegrees(22.5f));
-		int scale = basin ? 23 : 24;
-
-		blockElement(shaft(Direction.Axis.Z))
-				.rotateBlock(0, 0, getCurrentAngle())
-				.scale(scale)
-				.render(graphics);
-
-		blockElement(AllBlocks.MECHANICAL_PRESS.getDefaultState())
-				.scale(scale)
-				.render(graphics);
-
-		blockElement(AllPartialModels.MECHANICAL_PRESS_HEAD)
-				.atLocal(0, -getAnimatedHeadOffset(), 0)
-				.scale(scale)
-				.render(graphics);
-
-		if (basin)
-			blockElement(AllBlocks.BASIN.getDefaultState())
-					.atLocal(0, 1.65, 0)
-					.scale(scale)
-					.render(graphics);
-
-		matrixStack.popPose();
+	public int getWidth() {
+		return 50;
 	}
 
-	private float getAnimatedHeadOffset() {
-		float cycle = (AnimationTickHolder.getRenderTime() - offset * 8) % 30;
+	@Override
+	public int getHeight() {
+		return 100;
+	}
+
+	@Override
+	public void draw(int xOffset, int yOffset) {
+		GlStateManager.pushMatrix();
+		GlStateManager.enableDepthTest();
+		GlStateManager.translatef(xOffset, yOffset, 0);
+		GlStateManager.rotatef(-15.5f, 1, 0, 0);
+		GlStateManager.rotatef(22.5f, 0, 1, 0);
+		GlStateManager.translatef(-45, -5, 0);
+		GlStateManager.scaled(.45f, .45f, .45f);
+
+		GlStateManager.pushMatrix();
+		ScreenElementRenderer.renderBlock(this::shaft);
+		GlStateManager.popMatrix();
+
+		GlStateManager.pushMatrix();
+		ScreenElementRenderer.renderBlock(this::body);
+		GlStateManager.popMatrix();
+
+		GlStateManager.pushMatrix();
+		ScreenElementRenderer.renderModel(this::head);
+		GlStateManager.popMatrix();
+		
+		if (basin) {
+			GlStateManager.pushMatrix();
+			ScreenElementRenderer.renderBlock(this::basin);
+			GlStateManager.popMatrix();
+		}
+
+		GlStateManager.popMatrix();
+	}
+
+	private BlockState shaft() {
+		float t = 25;
+		GlStateManager.translatef(t, -t, -t);
+		GlStateManager.rotated(getCurrentAngle() * 2, 1, 0, 0);
+		GlStateManager.translatef(-t, t, t);
+		return AllBlocks.SHAFT.get().getDefaultState().with(BlockStateProperties.AXIS, Axis.Z);
+	}
+
+	private BlockState body() {
+		return AllBlocks.MECHANICAL_PRESS.get().getDefaultState().with(BlockStateProperties.HORIZONTAL_FACING,
+				Direction.SOUTH);
+	}
+
+	private IBakedModel head() {
+		float cycle = (ticks + Minecraft.getInstance().getRenderPartialTicks()) % 30;
+		float verticalOffset = 0;
 		if (cycle < 10) {
 			float progress = cycle / 10;
-			return -(progress * progress * progress);
+			verticalOffset = -(progress * progress * progress);
+		} else if (cycle < 15) {
+			verticalOffset = -1;
+		} else if (cycle < 20) {
+			verticalOffset = -1 + (1 - ((20 - cycle) / 5));
+		} else {
+			verticalOffset = 0;
 		}
-		if (cycle < 15)
-			return -1;
-		if (cycle < 20)
-			return -1 + (1 - ((20 - cycle) / 5));
-		return 0;
+		GlStateManager.translated(0, -verticalOffset * 50, 0);
+		return AllBlockPartials.MECHANICAL_PRESS_HEAD.get();
+	}
+	
+	private BlockState basin() {
+		GlStateManager.translatef(0, 85, 0);
+		return AllBlocks.BASIN.get().getDefaultState();
 	}
 
 }

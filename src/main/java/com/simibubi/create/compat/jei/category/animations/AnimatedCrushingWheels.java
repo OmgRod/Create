@@ -1,39 +1,58 @@
 package com.simibubi.create.compat.jei.category.animations;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.simibubi.create.AllBlocks;
+import com.simibubi.create.foundation.gui.ScreenElementRenderer;
 
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.core.Direction;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.block.BlockState;
+import net.minecraft.state.properties.BlockStateProperties;
+import net.minecraft.util.Direction.Axis;
 
 public class AnimatedCrushingWheels extends AnimatedKinetics {
 
-	private final BlockState wheel = AllBlocks.CRUSHING_WHEEL.getDefaultState()
-			.setValue(BlockStateProperties.AXIS, Direction.Axis.X);
+	@Override
+	public int getWidth() {
+		return 150;
+	}
 
 	@Override
-	public void draw(GuiGraphics graphics, int xOffset, int yOffset) {
-		PoseStack matrixStack = graphics.pose();
-		matrixStack.pushPose();
-		matrixStack.translate(xOffset, yOffset, 100);
-		matrixStack.mulPose(Axis.YP.rotationDegrees(-22.5f));
-		int scale = 22;
+	public int getHeight() {
+		return 100;
+	}
 
-		blockElement(wheel)
-				.rotateBlock(0, 90, -getCurrentAngle())
-				.scale(scale)
-				.render(graphics);
+	@Override
+	public void draw(int xOffset, int yOffset) {
+		GlStateManager.enableDepthTest();
+		GlStateManager.translatef(xOffset, yOffset, 0);
+		GlStateManager.translatef(-45, 10, 0);
+		GlStateManager.rotatef(22.5f, 0, 1, 0);
+		GlStateManager.scaled(.45f, .45f, .45f);
+		ScreenElementRenderer.renderBlock(this::leftWheel);
+		ScreenElementRenderer.renderBlock(this::rightWheel);
+	}
 
-		blockElement(wheel)
-				.rotateBlock(0, 90, getCurrentAngle())
-				.atLocal(2, 0, 0)
-				.scale(scale)
-				.render(graphics);
+	private BlockState leftWheel() {
+		float angle = getCurrentAngle();
+		GlStateManager.translatef(-50, 0, 0);
+		
+		float t = 25;
+		GlStateManager.translatef(t, -t, t);
+		GlStateManager.rotated(angle, 0, 0, 1);
+		GlStateManager.translatef(-t, t, -t);
+		
+		return AllBlocks.CRUSHING_WHEEL.get().getDefaultState().with(BlockStateProperties.AXIS, Axis.X);
+	}
 
-		matrixStack.popPose();
+	private BlockState rightWheel() {
+		float angle = -getCurrentAngle();
+		GlStateManager.translatef(50, 0, 0);
+		
+		float t = 25;
+		GlStateManager.translatef(t, -t, t);
+		GlStateManager.rotated(angle, 0, 0, 1);
+		GlStateManager.translatef(-t, t, -t);
+		
+		return AllBlocks.CRUSHING_WHEEL.get().getDefaultState().with(BlockStateProperties.AXIS, Axis.X);
 	}
 
 }

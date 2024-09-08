@@ -1,34 +1,55 @@
 package com.simibubi.create.compat.jei.category.animations;
 
-import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.simibubi.create.AllBlockPartials;
 import com.simibubi.create.AllBlocks;
-import com.simibubi.create.AllPartialModels;
-import com.simibubi.create.foundation.gui.AllGuiTextures;
+import com.simibubi.create.foundation.gui.ScreenElementRenderer;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.block.BlockState;
+import net.minecraft.client.renderer.model.IBakedModel;
 
 public class AnimatedMillstone extends AnimatedKinetics {
 
 	@Override
-	public void draw(GuiGraphics graphics, int xOffset, int yOffset) {
-		PoseStack matrixStack = graphics.pose();
-		matrixStack.pushPose();
-		matrixStack.translate(xOffset, yOffset, 0);
-		AllGuiTextures.JEI_SHADOW.render(graphics, -16, 13);
-		matrixStack.translate(-2, 18, 0);
-		int scale = 22;
-
-		blockElement(AllPartialModels.MILLSTONE_COG)
-			.rotateBlock(22.5, getCurrentAngle() * 2, 0)
-			.scale(scale)
-			.render(graphics);
-
-		blockElement(AllBlocks.MILLSTONE.getDefaultState())
-			.rotateBlock(22.5, 22.5, 0)
-			.scale(scale)
-			.render(graphics);
-
-		matrixStack.popPose();
+	public int getWidth() {
+		return 50;
 	}
 
+	@Override
+	public int getHeight() {
+		return 50;
+	}
+
+	@Override
+	public void draw(int xOffset, int yOffset) {
+		GlStateManager.pushMatrix();
+		GlStateManager.enableDepthTest();
+		GlStateManager.translatef(xOffset, yOffset, 0);
+		GlStateManager.rotatef(-15.5f, 1, 0, 0);
+		GlStateManager.rotatef(22.5f, 0, 1, 0);
+		GlStateManager.translatef(-45, -5, 0);
+		GlStateManager.scaled(.45f, .45f, .45f);
+
+		GlStateManager.pushMatrix();
+		ScreenElementRenderer.renderModel(this::cogwheel);
+		GlStateManager.popMatrix();
+
+		GlStateManager.pushMatrix();
+		ScreenElementRenderer.renderBlock(this::body);
+		GlStateManager.popMatrix();
+
+		GlStateManager.popMatrix();
+	}
+
+	private IBakedModel cogwheel() {
+		float t = 25;
+		GlStateManager.translatef(t, -t, -t);
+		GlStateManager.rotated(getCurrentAngle() * 2, 0, 1, 0);
+		GlStateManager.translatef(-t, t, t);
+		return AllBlockPartials.MILLSTONE_COG.get();
+	}
+
+	private BlockState body() {
+		return AllBlocks.MILLSTONE.get().getDefaultState();
+	}
 }

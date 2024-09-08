@@ -1,25 +1,36 @@
 package com.simibubi.create.foundation.block.render;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
+import com.simibubi.create.Create;
+
+import net.minecraft.util.ResourceLocation;
 
 public class SpriteShifter {
 
-	private static final Map<String, SpriteShiftEntry> ENTRY_CACHE = new HashMap<>();
+	protected static Map<String, SpriteShiftEntry> textures = new HashMap<>();
 
-	public static SpriteShiftEntry get(ResourceLocation originalLocation, ResourceLocation targetLocation) {
+	public static SpriteShiftEntry get(String originalLocation, String targetLocation) {
 		String key = originalLocation + "->" + targetLocation;
-		if (ENTRY_CACHE.containsKey(key))
-			return ENTRY_CACHE.get(key);
+		if (textures.containsKey(key))
+			return textures.get(key);
 
 		SpriteShiftEntry entry = new SpriteShiftEntry();
-		DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> entry.set(originalLocation, targetLocation));
-		ENTRY_CACHE.put(key, entry);
+		entry.originalTextureLocation = new ResourceLocation(Create.ID, originalLocation);
+		entry.targetTextureLocation = new ResourceLocation(Create.ID, targetLocation);
+		textures.put(key, entry);
 		return entry;
+	}
+
+	public static void reloadUVs() {
+		textures.values().forEach(SpriteShiftEntry::loadTextures);
+	}
+
+	public static List<ResourceLocation> getAllTargetSprites() {
+		return textures.values().stream().map(SpriteShiftEntry::getTargetResourceLocation).collect(Collectors.toList());
 	}
 
 }

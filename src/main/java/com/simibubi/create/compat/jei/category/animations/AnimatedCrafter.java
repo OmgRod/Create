@@ -1,38 +1,58 @@
 package com.simibubi.create.compat.jei.category.animations;
 
-import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.simibubi.create.AllBlockPartials;
 import com.simibubi.create.AllBlocks;
-import com.simibubi.create.foundation.gui.AllGuiTextures;
+import com.simibubi.create.foundation.gui.ScreenElementRenderer;
+import com.simibubi.create.modules.contraptions.components.crafter.MechanicalCrafterBlock;
 
-import dev.engine_room.flywheel.lib.transform.TransformStack;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.block.BlockState;
+import net.minecraft.client.renderer.model.IBakedModel;
+import net.minecraft.util.Direction;
 
 public class AnimatedCrafter extends AnimatedKinetics {
 
 	@Override
-	public void draw(GuiGraphics graphics, int xOffset, int yOffset) {
-		PoseStack matrixStack = graphics.pose();
-		matrixStack.pushPose();
-		matrixStack.translate(xOffset, yOffset, 0);
-		AllGuiTextures.JEI_SHADOW.render(graphics, -16, 13);
+	public int getWidth() {
+		return 50;
+	}
 
-		matrixStack.translate(3, 16, 0);
-		TransformStack.of(matrixStack)
-			.rotateXDegrees(-12.5f)
-			.rotateYDegrees(-22.5f);
-		int scale = 22;
+	@Override
+	public int getHeight() {
+		return 50;
+	}
 
-		blockElement(cogwheel())
-			.rotateBlock(90, 0, getCurrentAngle())
-			.scale(scale)
-			.render(graphics);
+	@Override
+	public void draw(int xOffset, int yOffset) {
+		GlStateManager.pushMatrix();
+		GlStateManager.enableDepthTest();
+		GlStateManager.rotatef(-15.5f, 1, 0, 0);
+		GlStateManager.rotatef(-22.5f, 0, 1, 0);
+		GlStateManager.translatef(xOffset, yOffset, 0);
+		GlStateManager.translatef(-45, -5, 0);
+		GlStateManager.scaled(.45f, .45f, .45f);
 
-		blockElement(AllBlocks.MECHANICAL_CRAFTER.getDefaultState())
-			.rotateBlock(0, 180, 0)
-			.scale(scale)
-			.render(graphics);
+		ScreenElementRenderer.renderModel(() -> cogwheel(true));
+		ScreenElementRenderer.renderBlock(this::body);
+		GlStateManager.translatef(50, 0, 0);
 
-		matrixStack.popPose();
+		GlStateManager.popMatrix();
+	}
+
+	private IBakedModel cogwheel(boolean forward) {
+		float t = 25;
+		GlStateManager.translatef(t, -t, -t);
+		GlStateManager.rotated(getCurrentAngle() * 2 * (forward ? 1 : -1), 0, 0, 1);
+		GlStateManager.rotated(90, 1, 0, 0);
+		GlStateManager.translatef(-t, t, t);
+		return AllBlockPartials.SHAFTLESS_COGWHEEL.get();
+	}
+
+	private BlockState body() {
+		return AllBlocks.MECHANICAL_CRAFTER
+				.get()
+				.getDefaultState()
+				.with(MechanicalCrafterBlock.HORIZONTAL_FACING, Direction.WEST);
 	}
 
 }

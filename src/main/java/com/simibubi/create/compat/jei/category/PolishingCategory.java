@@ -1,67 +1,78 @@
 package com.simibubi.create.compat.jei.category;
 
-import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.Arrays;
+import java.util.List;
 
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.simibubi.create.AllItems;
-import com.simibubi.create.content.equipment.sandPaper.SandPaperPolishingRecipe;
-import com.simibubi.create.content.processing.recipe.ProcessingOutput;
-import com.simibubi.create.foundation.gui.AllGuiTextures;
-import com.simibubi.create.foundation.gui.element.GuiGameElement;
+import com.simibubi.create.ScreenResources;
+import com.simibubi.create.modules.contraptions.processing.ProcessingOutput;
+import com.simibubi.create.modules.curiosities.tools.SandPaperPolishingRecipe;
 
-import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
-import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
-import mezz.jei.api.recipe.IFocusGroup;
-import mezz.jei.api.recipe.RecipeIngredientRole;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.core.NonNullList;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Ingredient;
+import mezz.jei.api.constants.VanillaTypes;
+import mezz.jei.api.gui.IRecipeLayout;
+import mezz.jei.api.gui.ingredient.IGuiItemStackGroup;
+import mezz.jei.api.ingredients.IIngredients;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.ItemRenderer;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.crafting.Ingredient;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.util.NonNullList;
 
-@ParametersAreNonnullByDefault
 public class PolishingCategory extends CreateRecipeCategory<SandPaperPolishingRecipe> {
 
-	private final ItemStack renderedSandpaper;
+	private ItemStack renderedSandpaper;
 
-	public PolishingCategory(Info<SandPaperPolishingRecipe> info) {
-		super(info);
+	public PolishingCategory() {
+		super("sandpaper_polishing", itemIcon(AllItems.SAND_PAPER.get()), emptyBackground(177, 55));
 		renderedSandpaper = AllItems.SAND_PAPER.asStack();
 	}
 
 	@Override
-	public void setRecipe(IRecipeLayoutBuilder builder, SandPaperPolishingRecipe recipe, IFocusGroup focuses) {
-		builder
-				.addSlot(RecipeIngredientRole.INPUT, 27, 29)
-				.setBackground(getRenderedSlot(), -1, -1)
-				.addIngredients(recipe.getIngredients().get(0));
-
-		ProcessingOutput output = recipe.getRollableResults().get(0);
-		builder
-				.addSlot(RecipeIngredientRole.OUTPUT, 132, 29)
-				.setBackground(getRenderedSlot(output), -1, -1)
-				.addItemStack(output.getStack())
-				.addTooltipCallback(addStochasticTooltip(output));
+	public Class<? extends SandPaperPolishingRecipe> getRecipeClass() {
+		return SandPaperPolishingRecipe.class;
 	}
 
 	@Override
-	public void draw(SandPaperPolishingRecipe recipe, IRecipeSlotsView iRecipeSlotsView, GuiGraphics graphics, double mouseX, double mouseY) {
-		AllGuiTextures.JEI_SHADOW.render(graphics, 61, 21);
-		AllGuiTextures.JEI_LONG_ARROW.render(graphics, 52, 32);
+	public void setIngredients(SandPaperPolishingRecipe recipe, IIngredients ingredients) {
+		ingredients.setInputIngredients(recipe.getIngredients());
+		ingredients.setOutputs(VanillaTypes.ITEM, recipe.getPossibleOutputs());
+	}
+
+	@Override
+	public void setRecipe(IRecipeLayout recipeLayout, SandPaperPolishingRecipe recipe, IIngredients ingredients) {
+		IGuiItemStackGroup itemStacks = recipeLayout.getItemStacks();
+		List<ProcessingOutput> results = recipe.getRollableResults();
+
+		itemStacks.init(0, true, 26, 28);
+		itemStacks.set(0, Arrays.asList(recipe.getIngredients().get(0).getMatchingStacks()));
+		itemStacks.init(1, false, 131, 28);
+		itemStacks.set(1, results.get(0).getStack());
+
+		addStochasticTooltip(itemStacks, results);
+	}
+
+	@Override
+	public void draw(SandPaperPolishingRecipe recipe, double mouseX, double mouseY) {
+		ScreenResources.JEI_SLOT.draw(26, 28);
+		getRenderedSlot(recipe, 0).draw(131, 28);
+		ScreenResources.JEI_SHADOW.draw(61, 21);
+		ScreenResources.JEI_LONG_ARROW.draw(52, 32);
 
 		NonNullList<Ingredient> ingredients = recipe.getIngredients();
-		ItemStack[] matchingStacks = ingredients.get(0)
-			.getItems();
+		ItemStack[] matchingStacks = ingredients.get(0).getMatchingStacks();
 		if (matchingStacks.length == 0)
 			return;
 
-
-		CompoundTag tag = renderedSandpaper.getOrCreateTag();
+		GlStateManager.pushMatrix();
+		CompoundNBT tag = renderedSandpaper.getOrCreateTag();
 		tag.put("Polishing", matchingStacks[0].serializeNBT());
 		tag.putBoolean("JEI", true);
-		GuiGameElement.of(renderedSandpaper)
-				.<GuiGameElement.GuiRenderBuilder>at(getBackground().getWidth() / 2 - 16, 0, 0)
-				.scale(2)
-				.render(graphics);
+		ItemRenderer itemRenderer = Minecraft.getInstance().getItemRenderer();
+		GlStateManager.scaled(2, 2, 2);
+		itemRenderer.renderItemIntoGUI(renderedSandpaper, getBackground().getWidth() / 4 - 8, 1);
+		GlStateManager.popMatrix();
 	}
 
 }

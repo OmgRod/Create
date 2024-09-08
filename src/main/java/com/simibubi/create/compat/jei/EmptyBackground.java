@@ -1,7 +1,6 @@
 package com.simibubi.create.compat.jei;
 
 import mezz.jei.api.gui.drawable.IDrawable;
-import net.minecraft.client.gui.GuiGraphics;
 
 public class EmptyBackground implements IDrawable {
 
@@ -12,7 +11,7 @@ public class EmptyBackground implements IDrawable {
 		this.width = width;
 		this.height = height;
 	}
-
+	
 	@Override
 	public int getWidth() {
 		return width;
@@ -24,6 +23,7 @@ public class EmptyBackground implements IDrawable {
 	}
 
 	@Override
-	public void draw(GuiGraphics graphics, int xOffset, int yOffset) {}
+	public void draw(int xOffset, int yOffset) {
+	}
 
 }

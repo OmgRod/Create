@@ -1,76 +1,37 @@
 package com.simibubi.create.compat.jei.category;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
+import java.util.Map;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import org.jetbrains.annotations.NotNull;
-
-import com.simibubi.create.AllFluids;
-import com.simibubi.create.content.fluids.potion.PotionFluidHandler;
-import com.simibubi.create.content.processing.recipe.ProcessingOutput;
-import com.simibubi.create.foundation.gui.AllGuiTextures;
-import com.simibubi.create.foundation.utility.Components;
+import com.simibubi.create.Create;
+import com.simibubi.create.ScreenResources;
+import com.simibubi.create.compat.jei.DoubleItemIcon;
+import com.simibubi.create.compat.jei.EmptyBackground;
 import com.simibubi.create.foundation.utility.Lang;
+import com.simibubi.create.modules.contraptions.processing.ProcessingOutput;
+import com.simibubi.create.modules.contraptions.processing.ProcessingRecipe;
 
-import mezz.jei.api.forge.ForgeTypes;
 import mezz.jei.api.gui.drawable.IDrawable;
-import mezz.jei.api.gui.ingredient.IRecipeSlotTooltipCallback;
-import mezz.jei.api.recipe.RecipeType;
+import mezz.jei.api.gui.ingredient.IGuiItemStackGroup;
 import mezz.jei.api.recipe.category.IRecipeCategory;
-import mezz.jei.api.registration.IRecipeCatalystRegistration;
-import mezz.jei.api.registration.IRecipeRegistration;
-import net.minecraft.ChatFormatting;
-import net.minecraft.MethodsReturnNonnullByDefault;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Recipe;
-import net.minecraftforge.fluids.FluidStack;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.crafting.IRecipe;
+import net.minecraft.util.IItemProvider;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.text.TextFormatting;
 
-@ParametersAreNonnullByDefault
-@MethodsReturnNonnullByDefault
-public abstract class CreateRecipeCategory<T extends Recipe<?>> implements IRecipeCategory<T> {
-	private static final IDrawable BASIC_SLOT = asDrawable(AllGuiTextures.JEI_SLOT);
-	private static final IDrawable CHANCE_SLOT = asDrawable(AllGuiTextures.JEI_CHANCE_SLOT);
+public abstract class CreateRecipeCategory<T extends IRecipe<?>> implements IRecipeCategory<T> {
 
-	protected final RecipeType<T> type;
-	protected final Component title;
-	protected final IDrawable background;
-	protected final IDrawable icon;
+	private ResourceLocation uid;
+	private String name;
+	private IDrawable icon;
+	private IDrawable background;
 
-	private final Supplier<List<T>> recipes;
-	private final List<Supplier<? extends ItemStack>> catalysts;
-
-	public CreateRecipeCategory(Info<T> info) {
-		this.type = info.recipeType();
-		this.title = info.title();
-		this.background = info.background();
-		this.icon = info.icon();
-		this.recipes = info.recipes();
-		this.catalysts = info.catalysts();
-	}
-
-	@NotNull
-	@Override
-	public RecipeType<T> getRecipeType() {
-		return type;
-	}
-
-	@Override
-	public Component getTitle() {
-		return title;
-	}
-
-	@Override
-	public IDrawable getBackground() {
-		return background;
+	public CreateRecipeCategory(String id, IDrawable icon, IDrawable background) {
+		uid = new ResourceLocation(Create.ID, id);
+		name = id;
+		this.background = background;
+		this.icon = icon;
 	}
 
 	@Override
@@ -78,117 +39,68 @@ public abstract class CreateRecipeCategory<T extends Recipe<?>> implements IReci
 		return icon;
 	}
 
-	public void registerRecipes(IRecipeRegistration registration) {
-		registration.addRecipes(type, recipes.get());
+	@Override
+	public ResourceLocation getUid() {
+		return uid;
 	}
 
-	public void registerCatalysts(IRecipeCatalystRegistration registration) {
-		catalysts.forEach(s -> registration.addRecipeCatalyst(s.get(), type));
+	@Override
+	public String getTitle() {
+		return Lang.translate("recipe." + name);
 	}
 
-	public static IDrawable getRenderedSlot() {
-		return BASIC_SLOT;
+	@Override
+	public IDrawable getBackground() {
+		return background;
 	}
 
-	public static IDrawable getRenderedSlot(ProcessingOutput output) {
-		return getRenderedSlot(output.getChance());
+	protected static ScreenResources getRenderedSlot(IRecipe<?> recipe, int index) {
+		ScreenResources jeiSlot = ScreenResources.JEI_SLOT;
+		if (!(recipe instanceof ProcessingRecipe))
+			return jeiSlot;
+		ProcessingRecipe<?> processingRecipe = (ProcessingRecipe<?>) recipe;
+		List<ProcessingOutput> rollableResults = processingRecipe.getRollableResults();
+		if (rollableResults.size() <= index)
+			return jeiSlot;
+		if (processingRecipe.getRollableResults().get(index).getChance() == 1)
+			return jeiSlot;
+		return ScreenResources.JEI_CHANCE_SLOT;
 	}
 
-	public static IDrawable getRenderedSlot(float chance) {
-		if (chance == 1)
-			return BASIC_SLOT;
-
-		return CHANCE_SLOT;
+	protected static IDrawable emptyBackground(int width, int height) {
+		return new EmptyBackground(width, height);
 	}
 
-	public static ItemStack getResultItem(Recipe<?> recipe) {
-		ClientLevel level = Minecraft.getInstance().level;
-		if (level == null)
-			return ItemStack.EMPTY;
-		return recipe.getResultItem(level.registryAccess());
+	protected static IDrawable doubleItemIcon(IItemProvider item1, IItemProvider item2) {
+		return new DoubleItemIcon(() -> new ItemStack(item1), () -> new ItemStack(item2));
 	}
 
-	public static IRecipeSlotTooltipCallback addStochasticTooltip(ProcessingOutput output) {
-		return (view, tooltip) -> {
-			float chance = output.getChance();
-			if (chance != 1)
-				tooltip.add(1, Lang.translateDirect("recipe.processing.chance", chance < 0.01 ? "<1" : (int) (chance * 100))
-					.withStyle(ChatFormatting.GOLD));
-		};
+	protected static IDrawable itemIcon(IItemProvider item) {
+		return new DoubleItemIcon(() -> new ItemStack(item), () -> ItemStack.EMPTY);
 	}
 
-	public static List<FluidStack> withImprovedVisibility(List<FluidStack> stacks) {
-		return stacks.stream()
-			.map(CreateRecipeCategory::withImprovedVisibility)
-			.collect(Collectors.toList());
-	}
-
-	public static FluidStack withImprovedVisibility(FluidStack stack) {
-		FluidStack display = stack.copy();
-		int displayedAmount = (int) (stack.getAmount() * .75f) + 250;
-		display.setAmount(displayedAmount);
-		return display;
-	}
-
-	public static IRecipeSlotTooltipCallback addFluidTooltip() {
-		return addFluidTooltip(-1);
-	}
-
-	public static IRecipeSlotTooltipCallback addFluidTooltip(int mbAmount) {
-		return (view, tooltip) -> {
-			Optional<FluidStack> displayed = view.getDisplayedIngredient(ForgeTypes.FLUID_STACK);
-			if (displayed.isEmpty())
+	protected static void addStochasticTooltip(IGuiItemStackGroup itemStacks, List<ProcessingOutput> results) {
+		itemStacks.addTooltipCallback((slotIndex, input, ingredient, tooltip) -> {
+			if (input)
 				return;
-
-			FluidStack fluidStack = displayed.get();
-
-			if (fluidStack.getFluid().isSame(AllFluids.POTION.get())) {
-				Component name = fluidStack.getDisplayName();
-				if (tooltip.isEmpty())
-					tooltip.add(0, name);
-				else
-					tooltip.set(0, name);
-
-				ArrayList<Component> potionTooltip = new ArrayList<>();
-				PotionFluidHandler.addPotionTooltip(fluidStack, potionTooltip, 1);
-				tooltip.addAll(1, potionTooltip.stream().toList());
-			}
-
-			int amount = mbAmount == -1 ? fluidStack.getAmount() : mbAmount;
-			Component text = Components.literal(String.valueOf(amount)).append(Lang.translateDirect("generic.unit.millibuckets")).withStyle(ChatFormatting.GOLD);
-			if (tooltip.isEmpty())
-				tooltip.add(0, text);
-			else {
-				List<Component> siblings = tooltip.get(0).getSiblings();
-				siblings.add(Components.literal(" "));
-				siblings.add(text);
-			}
-		};
+			ProcessingOutput output = results.get(slotIndex - 1);
+			if (output.getChance() != 1)
+				tooltip.add(1, TextFormatting.GOLD
+						+ Lang.translate("recipe.processing.chance", (int) (output.getChance() * 100)));
+		});
 	}
 
-	protected static IDrawable asDrawable(AllGuiTextures texture) {
-		return new IDrawable() {
-			@Override
-			public int getWidth() {
-				return texture.width;
-			}
-
-			@Override
-			public int getHeight() {
-				return texture.height;
-			}
-
-			@Override
-			public void draw(GuiGraphics graphics, int xOffset, int yOffset) {
-				texture.render(graphics, xOffset, yOffset);
-			}
-		};
+	protected static void addCatalystTooltip(IGuiItemStackGroup itemStacks, Map<Integer, Float> catalystIndices) {
+		itemStacks.addTooltipCallback((slotIndex, input, ingredient, tooltip) -> {
+			if (!input)
+				return;
+			if (!catalystIndices.containsKey(slotIndex))
+				return;
+			Float chance = catalystIndices.get(slotIndex);
+			tooltip.add(1, TextFormatting.YELLOW + Lang.translate("recipe.processing.catalyst"));
+			tooltip.add(2, TextFormatting.GOLD
+					+ Lang.translate("recipe.processing.chanceToReturn", (int) (chance.floatValue() * 100)));
+		});
 	}
 
-	public record Info<T extends Recipe<?>>(RecipeType<T> recipeType, Component title, IDrawable background, IDrawable icon, Supplier<List<T>> recipes, List<Supplier<? extends ItemStack>> catalysts) {
-	}
-
-	public interface Factory<T extends Recipe<?>> {
-		CreateRecipeCategory<T> create(Info<T> info);
-	}
 }

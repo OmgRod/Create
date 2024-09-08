@@ -1,74 +1,69 @@
 package com.simibubi.create.compat.jei.category;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-
+import com.simibubi.create.AllBlocks;
+import com.simibubi.create.AllItems;
+import com.simibubi.create.ScreenResources;
 import com.simibubi.create.compat.jei.category.animations.AnimatedCrushingWheels;
-import com.simibubi.create.content.kinetics.crusher.AbstractCrushingRecipe;
-import com.simibubi.create.content.processing.recipe.ProcessingOutput;
-import com.simibubi.create.content.processing.recipe.ProcessingRecipe;
-import com.simibubi.create.foundation.gui.AllGuiTextures;
-import com.simibubi.create.foundation.ponder.ui.LayoutHelper;
+import com.simibubi.create.modules.contraptions.components.crusher.AbstractCrushingRecipe;
+import com.simibubi.create.modules.contraptions.processing.ProcessingOutput;
 
-import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
-import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
-import mezz.jei.api.recipe.IFocusGroup;
-import mezz.jei.api.recipe.RecipeIngredientRole;
-import net.minecraft.client.gui.GuiGraphics;
+import mezz.jei.api.constants.VanillaTypes;
+import mezz.jei.api.gui.IRecipeLayout;
+import mezz.jei.api.gui.ingredient.IGuiItemStackGroup;
+import mezz.jei.api.ingredients.IIngredients;
 
-@ParametersAreNonnullByDefault
 public class CrushingCategory extends CreateRecipeCategory<AbstractCrushingRecipe> {
 
-	private final AnimatedCrushingWheels crushingWheels = new AnimatedCrushingWheels();
+	private AnimatedCrushingWheels crushingWheels = new AnimatedCrushingWheels();
 
-	public CrushingCategory(Info<AbstractCrushingRecipe> info) {
-		super(info);
+	public CrushingCategory() {
+		super("crushing", doubleItemIcon(AllBlocks.CRUSHING_WHEEL.get(), AllItems.CRUSHED_GOLD.get()),
+				emptyBackground(177, 100));
 	}
 
 	@Override
-	public void setRecipe(IRecipeLayoutBuilder builder, AbstractCrushingRecipe recipe, IFocusGroup focuses) {
-		builder
-				.addSlot(RecipeIngredientRole.INPUT, 51, 3)
-				.setBackground(getRenderedSlot(), -1, -1)
-				.addIngredients(recipe.getIngredients().get(0));
-
-		int xOffset = getBackground().getWidth() / 2;
-		int yOffset = 86;
-
-		layoutOutput(recipe).forEach(layoutEntry -> builder
-				.addSlot(RecipeIngredientRole.OUTPUT, (xOffset) + layoutEntry.posX() + 1, yOffset + layoutEntry.posY() + 1)
-				.setBackground(getRenderedSlot(layoutEntry.output()), -1, -1)
-				.addItemStack(layoutEntry.output().getStack())
-				.addTooltipCallback(addStochasticTooltip(layoutEntry.output()))
-		);
+	public Class<? extends AbstractCrushingRecipe> getRecipeClass() {
+		return AbstractCrushingRecipe.class;
 	}
 
-	private List<LayoutEntry> layoutOutput(ProcessingRecipe<?> recipe) {
-		int size = recipe.getRollableResults().size();
-		List<LayoutEntry> positions = new ArrayList<>(size);
+	@Override
+	public void setIngredients(AbstractCrushingRecipe recipe, IIngredients ingredients) {
+		ingredients.setInputIngredients(recipe.getIngredients());
+		ingredients.setOutputs(VanillaTypes.ITEM, recipe.getPossibleOutputs());
+	}
 
-		LayoutHelper layout = LayoutHelper.centeredHorizontal(size, 1, 18, 18, 1);
-		for (ProcessingOutput result : recipe.getRollableResults()) {
-			positions.add(new LayoutEntry(result, layout.getX(), layout.getY()));
-			layout.next();
+	@Override
+	public void setRecipe(IRecipeLayout recipeLayout, AbstractCrushingRecipe recipe, IIngredients ingredients) {
+		IGuiItemStackGroup itemStacks = recipeLayout.getItemStacks();
+		itemStacks.init(0, true, 50, 2);
+		itemStacks.set(0, Arrays.asList(recipe.getIngredients().get(0).getMatchingStacks()));
+
+		List<ProcessingOutput> results = recipe.getRollableResults();
+		int size = results.size();
+		int offset = -size * 19 / 2;
+		for (int outputIndex = 0; outputIndex < size; outputIndex++) {
+			itemStacks.init(outputIndex + 1, false, getBackground().getWidth() / 2 + offset + 19 * outputIndex, 78);
+			itemStacks.set(outputIndex + 1, results.get(outputIndex).getStack());
 		}
 
-		return positions;
+		addStochasticTooltip(itemStacks, results);
 	}
 
-	private record LayoutEntry(
-			ProcessingOutput output,
-			int posX,
-			int posY
-	) {}
-
 	@Override
-	public void draw(AbstractCrushingRecipe recipe, IRecipeSlotsView recipeSlotsView, GuiGraphics graphics, double mouseX, double mouseY) {
-		AllGuiTextures.JEI_DOWN_ARROW.render(graphics, 72, 7);
+	public void draw(AbstractCrushingRecipe recipe, double mouseX, double mouseY) {
+		List<ProcessingOutput> results = recipe.getRollableResults();
+		ScreenResources.JEI_SLOT.draw(50, 2);
+		ScreenResources.JEI_DOWN_ARROW.draw(72, 7);
 
-		crushingWheels.draw(graphics, 62, 59);
+		int size = results.size();
+		int offset = -size * 19 / 2;
+		for (int outputIndex = 0; outputIndex < results.size(); outputIndex++)
+			getRenderedSlot(recipe, outputIndex).draw(getBackground().getWidth() / 2 + offset + 19 * outputIndex, 78);
+
+		crushingWheels.draw(92, 49);
 	}
 
 }

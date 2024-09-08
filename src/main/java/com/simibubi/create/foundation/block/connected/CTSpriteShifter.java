@@ -1,27 +1,50 @@
 package com.simibubi.create.foundation.block.connected;
 
-import java.util.HashMap;
-import java.util.Map;
+import com.simibubi.create.Create;
+import com.simibubi.create.foundation.block.render.SpriteShifter;
 
-import com.simibubi.create.foundation.block.render.SpriteShiftEntry;
+import net.minecraft.util.ResourceLocation;
 
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
+public class CTSpriteShifter extends SpriteShifter {
 
-public class CTSpriteShifter {
+	public enum CTType {
+		OMNIDIRECTIONAL, HORIZONTAL, VERTICAL;
+	}
 
-	private static final Map<String, SpriteShiftEntry> ENTRY_CACHE = new HashMap<>();
+	public static CTSpriteShiftEntry get(CTType type, String blockTextureName) {
+		return get(type, blockTextureName, blockTextureName);
+	}
+	
+	
+	public static CTSpriteShiftEntry get(CTType type, String blockTextureName, String connectedTextureName) {
+		return get(type, new ResourceLocation(Create.ID, "block/" + blockTextureName), connectedTextureName);
+	}
+	
+	public static CTSpriteShiftEntry get(CTType type, ResourceLocation blockTexture, String connectedTextureName) {
+		String targetLocation = "block/connected/" + connectedTextureName;
+		String key = type.name() + ":" + blockTexture.getNamespace() + ":" + blockTexture.getPath() + "->" + targetLocation;
+		if (textures.containsKey(key))
+			return (CTSpriteShiftEntry) textures.get(key);
 
-	public static CTSpriteShiftEntry getCT(CTType type, ResourceLocation blockTexture, ResourceLocation connectedTexture) {
-		String key = blockTexture + "->" + connectedTexture + "+" + type.getId();
-		if (ENTRY_CACHE.containsKey(key))
-			return (CTSpriteShiftEntry) ENTRY_CACHE.get(key);
+		CTSpriteShiftEntry entry = create(type);
+		ResourceLocation targetTextureLocation = new ResourceLocation(Create.ID, targetLocation);
+		entry.set(blockTexture, targetTextureLocation);
 
-		CTSpriteShiftEntry entry = new CTSpriteShiftEntry(type);
-		DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> entry.set(blockTexture, connectedTexture));
-		ENTRY_CACHE.put(key, entry);
+		textures.put(key, entry);
 		return entry;
+	}
+
+	private static CTSpriteShiftEntry create(CTType type) {
+		switch (type) {
+		case HORIZONTAL:
+			return new CTSpriteShiftEntry.Horizontal();
+		case OMNIDIRECTIONAL:
+			return new CTSpriteShiftEntry.Omnidirectional();
+		case VERTICAL:
+			return new CTSpriteShiftEntry.Vertical();
+		default:
+			return null;
+		}
 	}
 
 }

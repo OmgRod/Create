@@ -1,55 +1,86 @@
 package com.simibubi.create.compat.jei.category.animations;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.simibubi.create.AllBlockPartials;
 import com.simibubi.create.AllBlocks;
-import com.simibubi.create.AllPartialModels;
-import com.simibubi.create.foundation.utility.AnimationTickHolder;
+import com.simibubi.create.foundation.gui.ScreenElementRenderer;
 
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.util.Mth;
+import net.minecraft.block.BlockState;
+import net.minecraft.client.renderer.model.IBakedModel;
 
 public class AnimatedMixer extends AnimatedKinetics {
 
 	@Override
-	public void draw(GuiGraphics graphics, int xOffset, int yOffset) {
-		PoseStack matrixStack = graphics.pose();
-		matrixStack.pushPose();
-		matrixStack.translate(xOffset, yOffset, 200);
-		matrixStack.mulPose(Axis.XP.rotationDegrees(-15.5f));
-		matrixStack.mulPose(Axis.YP.rotationDegrees(22.5f));
-		int scale = 23;
-
-		blockElement(cogwheel())
-			.rotateBlock(0, getCurrentAngle() * 2, 0)
-			.atLocal(0, 0, 0)
-			.scale(scale)
-			.render(graphics);
-
-		blockElement(AllBlocks.MECHANICAL_MIXER.getDefaultState())
-			.atLocal(0, 0, 0)
-			.scale(scale)
-			.render(graphics);
-
-		float animation = ((Mth.sin(AnimationTickHolder.getRenderTime() / 32f) + 1) / 5) + .5f;
-
-		blockElement(AllPartialModels.MECHANICAL_MIXER_POLE)
-			.atLocal(0, animation, 0)
-			.scale(scale)
-			.render(graphics);
-
-		blockElement(AllPartialModels.MECHANICAL_MIXER_HEAD)
-			.rotateBlock(0, getCurrentAngle() * 4, 0)
-			.atLocal(0, animation, 0)
-			.scale(scale)
-			.render(graphics);
-
-		blockElement(AllBlocks.BASIN.getDefaultState())
-			.atLocal(0, 1.65, 0)
-			.scale(scale)
-			.render(graphics);
-
-		matrixStack.popPose();
+	public int getWidth() {
+		return 50;
 	}
 
+	@Override
+	public int getHeight() {
+		return 150;
+	}
+
+	@Override
+	public void draw(int xOffset, int yOffset) {
+		GlStateManager.pushMatrix();
+		GlStateManager.enableDepthTest();
+		GlStateManager.translatef(xOffset, yOffset, 0);
+		GlStateManager.rotatef(-15.5f, 1, 0, 0);
+		GlStateManager.rotatef(22.5f, 0, 1, 0);
+		GlStateManager.translatef(-45, -5, 0);
+		GlStateManager.scaled(.45f, .45f, .45f);
+
+		GlStateManager.pushMatrix();
+		ScreenElementRenderer.renderModel(this::cogwheel);
+		GlStateManager.popMatrix();
+
+		GlStateManager.pushMatrix();
+		ScreenElementRenderer.renderBlock(this::body);
+		GlStateManager.popMatrix();
+
+		GlStateManager.pushMatrix();
+		ScreenElementRenderer.renderModel(this::pole);
+		GlStateManager.popMatrix();
+
+		GlStateManager.pushMatrix();
+		ScreenElementRenderer.renderModel(this::head);
+		GlStateManager.popMatrix();
+
+		GlStateManager.pushMatrix();
+		ScreenElementRenderer.renderBlock(this::basin);
+		GlStateManager.popMatrix();
+
+		GlStateManager.popMatrix();
+	}
+
+	private IBakedModel cogwheel() {
+		float t = 25;
+		GlStateManager.translatef(t, -t, -t);
+		GlStateManager.rotated(getCurrentAngle() * 2, 0, 1, 0);
+		GlStateManager.translatef(-t, t, t);
+		return AllBlockPartials.SHAFTLESS_COGWHEEL.get();
+	}
+
+	private BlockState body() {
+		return AllBlocks.MECHANICAL_MIXER.get().getDefaultState();
+	}
+
+	private IBakedModel pole() {
+		GlStateManager.translatef(0, 51, 0);
+		return AllBlockPartials.MECHANICAL_MIXER_POLE.get();
+	}
+
+	private IBakedModel head() {
+		float t = 25;
+		GlStateManager.translatef(0, 51, 0);
+		GlStateManager.translatef(t, -t, -t);
+		GlStateManager.rotated(getCurrentAngle() * 4, 0, 1, 0);
+		GlStateManager.translatef(-t, t, t);
+		return AllBlockPartials.MECHANICAL_MIXER_HEAD.get();
+	}
+
+	private BlockState basin() {
+		GlStateManager.translatef(0, 85, 0);
+		return AllBlocks.BASIN.get().getDefaultState();
+	}
 }

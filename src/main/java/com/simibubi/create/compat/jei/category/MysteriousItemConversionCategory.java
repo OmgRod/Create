@@ -1,53 +1,59 @@
 package com.simibubi.create.compat.jei.category;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import com.simibubi.create.AllBlocks;
 import com.simibubi.create.AllItems;
+import com.simibubi.create.ScreenResources;
 import com.simibubi.create.compat.jei.ConversionRecipe;
-import com.simibubi.create.foundation.gui.AllGuiTextures;
+import com.simibubi.create.modules.contraptions.processing.ProcessingOutput;
 
-import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
-import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
-import mezz.jei.api.recipe.IFocusGroup;
-import mezz.jei.api.recipe.RecipeIngredientRole;
-import net.minecraft.client.gui.GuiGraphics;
+import mezz.jei.api.constants.VanillaTypes;
+import mezz.jei.api.gui.IRecipeLayout;
+import mezz.jei.api.gui.ingredient.IGuiItemStackGroup;
+import mezz.jei.api.ingredients.IIngredients;
 
-@ParametersAreNonnullByDefault
 public class MysteriousItemConversionCategory extends CreateRecipeCategory<ConversionRecipe> {
 
-	public static final List<ConversionRecipe> RECIPES = new ArrayList<>();
-
-	static {
-		RECIPES.add(ConversionRecipe.create(AllItems.EMPTY_BLAZE_BURNER.asStack(), AllBlocks.BLAZE_BURNER.asStack()));
-		RECIPES.add(ConversionRecipe.create(AllBlocks.PECULIAR_BELL.asStack(), AllBlocks.HAUNTED_BELL.asStack()));
-//		RECIPES.add(ConversionRecipe.create(AllItems.CHROMATIC_COMPOUND.asStack(), AllItems.SHADOW_STEEL.asStack()));
-//		RECIPES.add(ConversionRecipe.create(AllItems.CHROMATIC_COMPOUND.asStack(), AllItems.REFINED_RADIANCE.asStack()));
+	public static List<ConversionRecipe> getRecipes() {
+		List<ConversionRecipe> recipes = new ArrayList<>();
+		recipes.add(ConversionRecipe.create(AllItems.CHROMATIC_COMPOUND.asStack(), AllItems.SHADOW_STEEL.asStack()));
+		recipes.add(ConversionRecipe.create(AllItems.CHROMATIC_COMPOUND.asStack(), AllItems.REFINED_RADIANCE.asStack()));
+		return recipes;
 	}
-
-	public MysteriousItemConversionCategory(Info<ConversionRecipe> info) {
-		super(info);
-	}
-
-	@Override
-	public void setRecipe(IRecipeLayoutBuilder builder, ConversionRecipe recipe, IFocusGroup focuses) {
-		builder
-				.addSlot(RecipeIngredientRole.INPUT, 27, 17)
-				.setBackground(getRenderedSlot(), -1, -1)
-				.addIngredients(recipe.getIngredients().get(0));
-		builder
-				.addSlot(RecipeIngredientRole.OUTPUT, 132, 17)
-				.setBackground(getRenderedSlot(), -1, -1)
-				.addItemStack(recipe.getRollableResults().get(0).getStack());
+	
+	public MysteriousItemConversionCategory() {
+		super("mystery_conversion", itemIcon(AllItems.CHROMATIC_COMPOUND.get()), emptyBackground(177, 50));
 	}
 
 	@Override
-	public void draw(ConversionRecipe recipe, IRecipeSlotsView iRecipeSlotsView, GuiGraphics graphics, double mouseX, double mouseY) {
-		AllGuiTextures.JEI_LONG_ARROW.render(graphics, 52, 20);
-		AllGuiTextures.JEI_QUESTION_MARK.render(graphics, 77, 5);
+	public Class<? extends ConversionRecipe> getRecipeClass() {
+		return ConversionRecipe.class;
+	}
+
+	@Override
+	public void setIngredients(ConversionRecipe recipe, IIngredients ingredients) {
+		ingredients.setInputIngredients(recipe.getIngredients());
+		ingredients.setOutputs(VanillaTypes.ITEM, recipe.getPossibleOutputs());
+	}
+
+	@Override
+	public void setRecipe(IRecipeLayout recipeLayout, ConversionRecipe recipe, IIngredients ingredients) {
+		IGuiItemStackGroup itemStacks = recipeLayout.getItemStacks();
+		List<ProcessingOutput> results = recipe.getRollableResults();
+		itemStacks.init(0, true, 26, 16);
+		itemStacks.set(0, Arrays.asList(recipe.getIngredients().get(0).getMatchingStacks()));
+		itemStacks.init(1, false, 131, 16);
+		itemStacks.set(1, results.get(0).getStack());
+	}
+
+	@Override
+	public void draw(ConversionRecipe recipe, double mouseX, double mouseY) {
+		ScreenResources.JEI_SLOT.draw(26, 16);
+		ScreenResources.JEI_SLOT.draw(131, 16);
+		ScreenResources.JEI_LONG_ARROW.draw(52, 20);
+		ScreenResources.JEI_QUESTION_MARK.draw(77, 5);
 	}
 
 }

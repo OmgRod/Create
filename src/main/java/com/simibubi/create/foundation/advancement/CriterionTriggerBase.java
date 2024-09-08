@@ -7,84 +7,78 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-
 import com.google.common.collect.Maps;
 import com.simibubi.create.Create;
 
-import net.minecraft.MethodsReturnNonnullByDefault;
-import net.minecraft.advancements.CriterionTrigger;
-import net.minecraft.advancements.critereon.AbstractCriterionTriggerInstance;
-import net.minecraft.advancements.critereon.ContextAwarePredicate;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.PlayerAdvancements;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.advancements.ICriterionTrigger;
+import net.minecraft.advancements.PlayerAdvancements;
+import net.minecraft.advancements.criterion.CriterionInstance;
+import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.util.ResourceLocation;
 
-@ParametersAreNonnullByDefault
-@MethodsReturnNonnullByDefault
-public abstract class CriterionTriggerBase<T extends CriterionTriggerBase.Instance> implements CriterionTrigger<T> {
+public abstract class CriterionTriggerBase<T extends CriterionTriggerBase.Instance> implements ICriterionTrigger<T> {
 
 	public CriterionTriggerBase(String id) {
-		this.id = Create.asResource(id);
+		this.ID = new ResourceLocation(Create.ID, id);
 	}
 
-	private final ResourceLocation id;
+	private ResourceLocation ID;
 	protected final Map<PlayerAdvancements, Set<Listener<T>>> listeners = Maps.newHashMap();
 
 	@Override
-	public void addPlayerListener(PlayerAdvancements playerAdvancementsIn, Listener<T> listener) {
+	public void addListener(PlayerAdvancements playerAdvancementsIn, Listener<T> listener) {
 		Set<Listener<T>> playerListeners = this.listeners.computeIfAbsent(playerAdvancementsIn, k -> new HashSet<>());
 
 		playerListeners.add(listener);
 	}
 
 	@Override
-	public void removePlayerListener(PlayerAdvancements playerAdvancementsIn, Listener<T> listener) {
+	public void removeListener(PlayerAdvancements playerAdvancementsIn, Listener<T> listener) {
 		Set<Listener<T>> playerListeners = this.listeners.get(playerAdvancementsIn);
-		if (playerListeners != null) {
+		if (playerListeners != null){
 			playerListeners.remove(listener);
-			if (playerListeners.isEmpty()) {
+			if (playerListeners.isEmpty()){
 				this.listeners.remove(playerAdvancementsIn);
 			}
 		}
 	}
 
 	@Override
-	public void removePlayerListeners(PlayerAdvancements playerAdvancementsIn) {
+	public void removeAllListeners(PlayerAdvancements playerAdvancementsIn) {
 		this.listeners.remove(playerAdvancementsIn);
 	}
 
 	@Override
 	public ResourceLocation getId() {
-		return id;
+		return ID;
 	}
 
-	protected void trigger(ServerPlayer player, @Nullable List<Supplier<Object>> suppliers) {
+	protected void trigger(ServerPlayerEntity player, List<Supplier<Object>> suppliers){
 		PlayerAdvancements playerAdvancements = player.getAdvancements();
 		Set<Listener<T>> playerListeners = this.listeners.get(playerAdvancements);
-		if (playerListeners != null) {
+		if (playerListeners != null){
 			List<Listener<T>> list = new LinkedList<>();
 
-			for (Listener<T> listener : playerListeners) {
-				if (listener.getTriggerInstance()
-					.test(suppliers)) {
+			for (Listener<T> listener :
+					playerListeners) {
+				if (listener.getCriterionInstance().test(suppliers)) {
 					list.add(listener);
 				}
 			}
 
-			list.forEach(listener -> listener.run(playerAdvancements));
+			list.forEach(listener -> listener.grantCriterion(playerAdvancements));
 
 		}
 	}
 
-	public abstract static class Instance extends AbstractCriterionTriggerInstance {
+	protected abstract static class Instance extends CriterionInstance {
 
-		public Instance(ResourceLocation idIn, ContextAwarePredicate predicate) {
-			super(idIn, predicate);
+		public Instance(ResourceLocation idIn) {
+			super(idIn);
 		}
 
-		protected abstract boolean test(@Nullable List<Supplier<Object>> suppliers);
+		protected abstract boolean test(List<Supplier<Object>> suppliers);
 	}
+
 
 }

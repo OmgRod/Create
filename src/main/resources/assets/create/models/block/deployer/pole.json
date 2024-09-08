@@ -1,6 +1,6 @@
 {
 	"credit": "Made with Blockbench",
-	"parent": "block/block",
+	"parent": "create:item/placement_handgun",
 	"ambientocclusion": false,
 	"textures": {
 		"mechanical_press_pole": "create:block/mechanical_press_pole"

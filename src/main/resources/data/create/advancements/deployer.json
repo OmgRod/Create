@@ -1,0 +1,40 @@
+{
+  "parent": "create:brass_casing",
+  "display": {
+    "icon": {
+      "item": "create:deployer"
+    },
+    "title": {
+      "translate": "advancement.create.deployer"
+    },
+    "description": {
+      "translate": "advancement.create.deployer.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "0": {
+      "trigger": "minecraft:placed_block",
+      "conditions": {
+        "block": "create:deployer"
+      }
+    },
+    "1": {
+      "trigger": "create:kinetic_block",
+      "conditions": {
+        "block": "create:deployer"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "0"
+    ],
+    [
+      "1"
+    ]
+  ]
+}
