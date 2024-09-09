@@ -33,18 +33,28 @@ public class ContraptionPlayerPassengerRotation {
 		}
 
 		Entity vehicle = player.getVehicle();
-		if (!(vehicle instanceof AbstractContraptionEntity contraptionEntity))
+		if (!(vehicle instanceof AbstractContraptionEntity)) {
 			return;
+		}
 
+		AbstractContraptionEntity contraptionEntity = (AbstractContraptionEntity) vehicle;
 		ContraptionRotationState rotationState = contraptionEntity.getRotationState();
 
-		float yaw = AngleHelper.wrapAngle180((contraptionEntity instanceof CarriageContraptionEntity cce)
-			? cce.getViewYRot(AnimationTickHolder.getPartialTicks())
-			: rotationState.yRotation);
+		float yaw;
+		if (contraptionEntity instanceof CarriageContraptionEntity) {
+			CarriageContraptionEntity cce = (CarriageContraptionEntity) contraptionEntity;
+			yaw = AngleHelper.wrapAngle180(cce.getViewYRot(AnimationTickHolder.getPartialTicks()));
+		} else {
+			yaw = AngleHelper.wrapAngle180(rotationState.yRotation);
+		}
 
-		float pitch = (contraptionEntity instanceof CarriageContraptionEntity cce)
-			? cce.getViewXRot(AnimationTickHolder.getPartialTicks())
-			: 0;
+		float pitch;
+		if (contraptionEntity instanceof CarriageContraptionEntity) {
+			CarriageContraptionEntity cce = (CarriageContraptionEntity) contraptionEntity;
+			pitch = cce.getViewXRot(AnimationTickHolder.getPartialTicks());
+		} else {
+			pitch = 0;
+		}
 
 		if (prevId != contraptionEntity.getId()) {
 			prevId = contraptionEntity.getId();
@@ -64,8 +74,7 @@ public class ContraptionPlayerPassengerRotation {
 		else if (yawRelativeToTrain > 60)
 			pitchDiff *= 0;
 
-		player.setYRot((float) (player.getYRot() + yawDiff));
-		player.setXRot((float) (player.getXRot() + pitchDiff));
+		player.setYRot(player.getYRot() + yawDiff);
+		player.setXRot(player.getXRot() + pitchDiff);
 	}
-
 }

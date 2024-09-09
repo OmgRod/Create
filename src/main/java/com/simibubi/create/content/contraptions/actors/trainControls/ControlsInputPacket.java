@@ -24,7 +24,7 @@ public class ControlsInputPacket extends SimplePacketBase {
 	private boolean stopControlling;
 
 	public ControlsInputPacket(Collection<Integer> activatedButtons, boolean press, int contraptionEntityId,
-		BlockPos controlsPos, boolean stopControlling) {
+							   BlockPos controlsPos, boolean stopControlling) {
 		this.contraptionEntityId = contraptionEntityId;
 		this.activatedButtons = activatedButtons;
 		this.press = press;
@@ -64,18 +64,21 @@ public class ControlsInputPacket extends SimplePacketBase {
 				return;
 
 			Entity entity = world.getEntity(contraptionEntityId);
-			if (!(entity instanceof AbstractContraptionEntity ace))
+			if (!(entity instanceof AbstractContraptionEntity)) {
 				return;
+			}
+			AbstractContraptionEntity ace = (AbstractContraptionEntity) entity;
+
 			if (stopControlling) {
 				ace.stopControlling(controlsPos);
 				return;
 			}
 
 			if (ace.toGlobalVector(Vec3.atCenterOf(controlsPos), 0)
-				.closerThan(player.position(), 16))
+					.closerThan(player.position(), 16)) {
 				ControlsServerHandler.receivePressed(world, ace, controlsPos, uniqueID, activatedButtons, press);
+			}
 		});
 		return true;
 	}
-
 }

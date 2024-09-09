@@ -34,7 +34,7 @@ public class PortableStorageInterfaceRenderer extends SafeBlockEntityRenderer<Po
 
 	@Override
 	protected void renderSafe(PortableStorageInterfaceBlockEntity be, float partialTicks, PoseStack ms,
-		MultiBufferSource buffer, int light, int overlay) {
+							  MultiBufferSource buffer, int light, int overlay) {
 		if (VisualizationManager.supportsVisualization(be.getLevel()))
 			return;
 
@@ -42,11 +42,11 @@ public class PortableStorageInterfaceRenderer extends SafeBlockEntityRenderer<Po
 		float progress = be.getExtensionDistance(partialTicks);
 		VertexConsumer vb = buffer.getBuffer(RenderType.solid());
 		render(blockState, be.isConnected(), progress, null, sbb -> sbb.light(light)
-			.renderInto(ms, vb));
+				.renderInto(ms, vb));
 	}
 
 	public static void renderInContraption(MovementContext context, VirtualRenderWorld renderWorld,
-		ContraptionMatrices matrices, MultiBufferSource buffer) {
+										   ContraptionMatrices matrices, MultiBufferSource buffer) {
 		BlockState blockState = context.state;
 		VertexConsumer vb = buffer.getBuffer(RenderType.solid());
 		float renderPartialTicks = AnimationTickHolder.getPartialTicks();
@@ -55,13 +55,13 @@ public class PortableStorageInterfaceRenderer extends SafeBlockEntityRenderer<Po
 		float progress = animation.getValue(renderPartialTicks);
 		boolean lit = animation.settled();
 		render(blockState, lit, progress, matrices.getModel(),
-			sbb -> sbb.light(LevelRenderer.getLightColor(renderWorld, context.localPos))
-				.useLevelLight(context.world, matrices.getWorld())
-				.renderInto(matrices.getViewProjection(), vb));
+				sbb -> sbb.light(LevelRenderer.getLightColor(renderWorld, context.localPos))
+						.useLevelLight(context.world, matrices.getWorld())
+						.renderInto(matrices.getViewProjection(), vb));
 	}
 
 	private static void render(BlockState blockState, boolean lit, float progress, PoseStack local,
-		Consumer<SuperByteBuffer> drawCallback) {
+							   Consumer<SuperByteBuffer> drawCallback) {
 		SuperByteBuffer middle = CachedBufferer.partial(getMiddleForState(blockState, lit), blockState);
 		SuperByteBuffer top = CachedBufferer.partial(getTopForState(blockState), blockState);
 
@@ -81,9 +81,9 @@ public class PortableStorageInterfaceRenderer extends SafeBlockEntityRenderer<Po
 
 	private static void rotateToFacing(SuperByteBuffer buffer, Direction facing) {
 		buffer.center()
-			.rotateYDegrees(AngleHelper.horizontalAngle(facing))
-			.rotateXDegrees(facing == Direction.UP ? 0 : facing == Direction.DOWN ? 180 : 90)
-			.uncenter();
+				.rotateYDegrees(AngleHelper.horizontalAngle(facing))
+				.rotateXDegrees(facing == Direction.UP ? 0 : facing == Direction.DOWN ? 180 : 90)
+				.uncenter();
 	}
 
 	static PortableStorageInterfaceBlockEntity getTargetPSI(MovementContext context) {
@@ -93,8 +93,10 @@ public class PortableStorageInterfaceRenderer extends SafeBlockEntityRenderer<Po
 
 		BlockPos pos = NbtUtils.readBlockPos(context.data.getCompound(_workingPos_));
 		BlockEntity blockEntity = context.world.getBlockEntity(pos);
-		if (!(blockEntity instanceof PortableStorageInterfaceBlockEntity psi))
+		if (!(blockEntity instanceof PortableStorageInterfaceBlockEntity)) {
 			return null;
+		}
+		PortableStorageInterfaceBlockEntity psi = (PortableStorageInterfaceBlockEntity) blockEntity;
 
 		if (!psi.isTransferring())
 			return null;
@@ -104,9 +106,9 @@ public class PortableStorageInterfaceRenderer extends SafeBlockEntityRenderer<Po
 	static PartialModel getMiddleForState(BlockState state, boolean lit) {
 		if (AllBlocks.PORTABLE_FLUID_INTERFACE.has(state))
 			return lit ? AllPartialModels.PORTABLE_FLUID_INTERFACE_MIDDLE_POWERED
-				: AllPartialModels.PORTABLE_FLUID_INTERFACE_MIDDLE;
+					: AllPartialModels.PORTABLE_FLUID_INTERFACE_MIDDLE;
 		return lit ? AllPartialModels.PORTABLE_STORAGE_INTERFACE_MIDDLE_POWERED
-			: AllPartialModels.PORTABLE_STORAGE_INTERFACE_MIDDLE;
+				: AllPartialModels.PORTABLE_STORAGE_INTERFACE_MIDDLE;
 	}
 
 	static PartialModel getTopForState(BlockState state) {

@@ -18,7 +18,7 @@ public class ContraptionDisableActorPacket extends SimplePacketBase {
 	private int entityID;
 	private ItemStack filter;
 	private boolean enable;
-	
+
 	public ContraptionDisableActorPacket(int entityID, ItemStack filter, boolean enable) {
 		this.entityID = entityID;
 		this.filter = filter;
@@ -42,14 +42,17 @@ public class ContraptionDisableActorPacket extends SimplePacketBase {
 	public boolean handle(Context context) {
 		context.enqueueWork(() -> {
 			Entity entityByID = Minecraft.getInstance().level.getEntity(entityID);
-			if (!(entityByID instanceof AbstractContraptionEntity ace))
+			if (!(entityByID instanceof AbstractContraptionEntity)) {
 				return;
-			
+			}
+
+			AbstractContraptionEntity ace = (AbstractContraptionEntity) entityByID;
 			Contraption contraption = ace.getContraption();
 			List<ItemStack> disabledActors = contraption.getDisabledActors();
-			if (filter.isEmpty())
+			if (filter.isEmpty()) {
 				disabledActors.clear();
-			
+			}
+
 			if (!enable) {
 				disabledActors.add(filter);
 				contraption.setActorsActive(filter, false);
@@ -58,13 +61,14 @@ public class ContraptionDisableActorPacket extends SimplePacketBase {
 
 			for (Iterator<ItemStack> iterator = disabledActors.iterator(); iterator.hasNext();) {
 				ItemStack next = iterator.next();
-				if (ContraptionControlsMovement.isSameFilter(next, filter) || next.isEmpty())
+				if (ContraptionControlsMovement.isSameFilter(next, filter) || next.isEmpty()) {
 					iterator.remove();
+				}
 			}
-			
+
 			contraption.setActorsActive(filter, true);
 		});
 		return true;
 	}
-	
+
 }

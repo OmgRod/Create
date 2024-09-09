@@ -3,9 +3,6 @@ package com.simibubi.create.compat.jei.category.sequencedAssembly;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.simibubi.create.compat.jei.category.CreateRecipeCategory;
 import com.simibubi.create.compat.jei.category.animations.AnimatedDeployer;
-import com.simibubi.create.compat.jei.category.animations.AnimatedPress;
-import com.simibubi.create.compat.jei.category.animations.AnimatedSaw;
-import com.simibubi.create.compat.jei.category.animations.AnimatedSpout;
 import com.simibubi.create.content.kinetics.deployer.DeployerApplicationRecipe;
 import com.simibubi.create.content.processing.sequenced.SequencedRecipe;
 import com.simibubi.create.foundation.fluid.FluidIngredient;
@@ -87,10 +84,10 @@ public abstract class SequencedAssemblySubCategory {
 			ms.translate(-7, 50, 0);
 			ms.scale(.75f, .75f, .75f);
 			spout.withFluids(recipe.getRecipe()
-				.getFluidIngredients()
-				.get(0)
-				.getMatchingFluidStacks())
-				.draw(graphics, getWidth() / 2, 0);
+							.getFluidIngredients()
+							.get(0)
+							.getMatchingFluidStacks())
+					.draw(graphics, getWidth() / 2, 0);
 			ms.popPose();
 		}
 
@@ -112,10 +109,14 @@ public abstract class SequencedAssemblySubCategory {
 					.setBackground(CreateRecipeCategory.getRenderedSlot(), -1, -1)
 					.addIngredients(recipe.getRecipe().getIngredients().get(1));
 
-			if (recipe.getAsAssemblyRecipe() instanceof DeployerApplicationRecipe deployerRecipe && deployerRecipe.shouldKeepHeldItem()) {
-				slot.addTooltipCallback(
-						(recipeSlotView, tooltip) -> tooltip.add(1, Lang.translateDirect("recipe.deploying.not_consumed").withStyle(ChatFormatting.GOLD))
-				);
+			// Use traditional type checking and casting
+			if (recipe.getAsAssemblyRecipe() instanceof DeployerApplicationRecipe) {
+				DeployerApplicationRecipe deployerRecipe = (DeployerApplicationRecipe) recipe.getAsAssemblyRecipe();
+				if (deployerRecipe.shouldKeepHeldItem()) {
+					slot.addTooltipCallback(
+							(recipeSlotView, tooltip) -> tooltip.add(1, Lang.translateDirect("recipe.deploying.not_consumed").withStyle(ChatFormatting.GOLD))
+					);
+				}
 			}
 		}
 

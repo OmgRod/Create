@@ -55,11 +55,11 @@ public class ChassisBlockEntity extends SmartBlockEntity {
 	public void addBehaviours(List<BlockEntityBehaviour> behaviours) {
 		int max = AllConfigs.server().kinetics.maxChassisRange.get();
 		range = new ChassisScrollValueBehaviour(Lang.translateDirect("contraptions.chassis.range"), this,
-			new CenteredSideValueBoxTransform(), be -> ((ChassisBlockEntity) be).collectChassisGroup());
+				new CenteredSideValueBoxTransform(), be -> ((ChassisBlockEntity) be).collectChassisGroup());
 		range.requiresWrench();
 		range.between(1, max);
 		range.withClientCallback(
-			i -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ChassisRangeDisplay.display(this)));
+				i -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ChassisRangeDisplay.display(this)));
 		range.setValue(max / 2);
 		range.withFormatter(s -> String.valueOf(currentlySelectedRange));
 		behaviours.add(range);
@@ -88,12 +88,12 @@ public class ChassisBlockEntity extends SmartBlockEntity {
 		if (!(getBlockState().getBlock() instanceof AbstractChassisBlock))
 			return Collections.emptyList();
 		return isRadial() ? getIncludedBlockPositionsRadial(forcedMovement, visualize)
-			: getIncludedBlockPositionsLinear(forcedMovement, visualize);
+				: getIncludedBlockPositionsLinear(forcedMovement, visualize);
 	}
 
 	protected boolean isRadial() {
 		return level.getBlockState(worldPosition)
-			.getBlock() instanceof RadialChassisBlock;
+				.getBlock() instanceof RadialChassisBlock;
 	}
 
 	public List<ChassisBlockEntity> collectChassisGroup() {
@@ -241,6 +241,8 @@ public class ChassisBlockEntity extends SmartBlockEntity {
 					if (searchPos.equals(worldPosition) && offset != facing)
 						continue;
 					if (BlockMovementChecks.isNotSupportive(searchedState, offset))
+
+
 						continue;
 
 					localFrontier.add(searchPos.relative(offset));
@@ -254,7 +256,7 @@ public class ChassisBlockEntity extends SmartBlockEntity {
 	class ChassisScrollValueBehaviour extends BulkScrollValueBehaviour {
 
 		public ChassisScrollValueBehaviour(Component label, SmartBlockEntity be, ValueBoxTransform slot,
-			Function<SmartBlockEntity, List<? extends SmartBlockEntity>> groupGetter) {
+										   Function<SmartBlockEntity, List<? extends SmartBlockEntity>> groupGetter) {
 			super(label, be, slot, groupGetter);
 		}
 
@@ -262,7 +264,7 @@ public class ChassisBlockEntity extends SmartBlockEntity {
 		public ValueSettingsBoard createBoard(Player player, BlockHitResult hitResult) {
 			ImmutableList<Component> rows = ImmutableList.of(Lang.translateDirect("contraptions.chassis.distance"));
 			ValueSettingsFormatter formatter =
-				new ValueSettingsFormatter(vs -> new ValueSettings(vs.row(), vs.value() + 1).format());
+					new ValueSettingsFormatter(vs -> new ValueSettings(vs.row(), vs.value() + 1).format());
 			return new ValueSettingsBoard(label, max - 1, 1, rows, formatter);
 		}
 
@@ -271,12 +273,26 @@ public class ChassisBlockEntity extends SmartBlockEntity {
 		public void newSettingHovered(ValueSettings valueSetting) {
 			if (!level.isClientSide)
 				return;
-			if (!AllKeys.ctrlDown())
-				currentlySelectedRange = valueSetting.value() + 1;
-			else
-				for (SmartBlockEntity be : getBulk())
-					if (be instanceof ChassisBlockEntity cbe)
-						cbe.currentlySelectedRange = valueSetting.value() + 1;
+			if (!AllKeys.ctrlDown()) {
+				// Explicit cast instead of pattern matching
+				if (getBulk() != null) {
+					for (BlockEntity be : getBulk()) {
+						if (be instanceof ChassisBlockEntity) {
+							ChassisBlockEntity cbe = (ChassisBlockEntity) be;
+							cbe.currentlySelectedRange = valueSetting.value() + 1;
+						}
+					}
+				}
+			} else {
+				if (getBulk() != null) {
+					for (BlockEntity be : getBulk()) {
+						if (be instanceof ChassisBlockEntity) {
+							ChassisBlockEntity cbe = (ChassisBlockEntity) be;
+							cbe.currentlySelectedRange = valueSetting.value() + 1;
+						}
+					}
+				}
+			}
 			ChassisRangeDisplay.display(ChassisBlockEntity.this);
 		}
 
@@ -290,7 +306,7 @@ public class ChassisBlockEntity extends SmartBlockEntity {
 			ValueSettings vs = super.getValueSettings();
 			return new ValueSettings(vs.row(), vs.value() - 1);
 		}
-		
+
 		@Override
 		public String getClipboardKey() {
 			return "Chassis";

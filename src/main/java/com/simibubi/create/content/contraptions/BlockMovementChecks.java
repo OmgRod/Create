@@ -174,8 +174,7 @@ public class BlockMovementChecks {
 			return true;
 		if (AllBlockTags.MOVABLE_EMPTY_COLLIDER.matches(state))
 			return true;
-		if (state.getCollisionShape(world, pos)
-			.isEmpty())
+		if (state.getCollisionShape(world, pos).isEmpty())
 			return false;
 		if (state.canBeReplaced())
 			return false;
@@ -206,232 +205,157 @@ public class BlockMovementChecks {
 		if (block instanceof ClockworkBearingBlock) {
 			BlockEntity be = world.getBlockEntity(pos);
 			if (be instanceof ClockworkBearingBlockEntity)
-				return !((ClockworkBearingBlockEntity) be).isRunning();
+				return !((ClockworkBearingBlockEntity
+
+						) be).isRunning();
 		}
-		if (block instanceof PulleyBlock) {
-			BlockEntity be = world.getBlockEntity(pos);
-			if (be instanceof PulleyBlockEntity)
-				return !((PulleyBlockEntity) be).running;
+		if (block instanceof MovingContraptionBlock) {
+			return false;
 		}
 
-		if (AllBlocks.BELT.has(state))
-			return true;
-		if (state.getBlock() instanceof GrindstoneBlock)
-			return true;
-		if (state.getBlock() instanceof ITrackBlock)
-			return false;
-		if (state.getBlock() instanceof StationBlock)
-			return false;
-		return state.getPistonPushReaction() != PushReaction.BLOCK;
+		return true;
 	}
 
 	private static boolean isBrittleFallback(BlockState state) {
 		Block block = state.getBlock();
-		if (state.hasProperty(BlockStateProperties.HANGING))
+		if (block instanceof BasePressurePlateBlock)
 			return true;
-
+		if (block instanceof MechanicalPistonBlock)
+			return true;
+		if (block instanceof AbstractChassisBlock)
+			return true;
+		if (block instanceof AbstractBogeyBlock)
+			return true;
+		if (block instanceof AbstractChassisBlock)
+			return true;
+		if (block instanceof BaseRailBlock)
+			return true;
+		if (block instanceof RedStoneWireBlock)
+			return true;
+		if (block instanceof DiodeBlock)
+			return true;
 		if (block instanceof LadderBlock)
-			return true;
-		if (block instanceof TorchBlock)
 			return true;
 		if (block instanceof SignBlock)
 			return true;
-		if (block instanceof BasePressurePlateBlock)
+		if (block instanceof TorchBlock)
 			return true;
-		if (block instanceof FaceAttachedHorizontalDirectionalBlock && !(block instanceof GrindstoneBlock))
+		if (block instanceof WallTorchBlock)
 			return true;
-		if (block instanceof CartAssemblerBlock)
-			return false;
-		if (block instanceof BaseRailBlock)
+		if (block instanceof WallSignBlock)
 			return true;
-		if (block instanceof DiodeBlock)
-			return true;
-		if (block instanceof RedStoneWireBlock)
+		if (block instanceof StandingSignBlock)
 			return true;
 		if (block instanceof WoolCarpetBlock)
+			return true;
+		if (block instanceof BedBlock)
+			return true;
+		if (block instanceof DoorBlock)
+			return true;
+		if (block instanceof BellBlock)
+			return true;
+		if (block instanceof FlowerPotBlock)
+			return true;
+		if (block instanceof GrindingWheelBlock)
+			return true;
+		if (block instanceof MechanicalBearingBlock)
+			return true;
+		if (block instanceof AbstractBogeyBlock)
+			return true;
+		if (block instanceof HandCrankBlock)
 			return true;
 		if (block instanceof WhistleBlock)
 			return true;
 		if (block instanceof WhistleExtenderBlock)
 			return true;
-		return AllBlockTags.BRITTLE.matches(state);
+		if (block instanceof FluidTankBlock)
+			return true;
+		if (block instanceof SlidingDoorBlock)
+			return true;
+		if (block instanceof RedstoneLinkBlock)
+			return true;
+
+		return false;
 	}
 
-	private static boolean isBlockAttachedTowardsFallback(BlockState state, Level world, BlockPos pos,
-		Direction direction) {
+	private static boolean isBlockAttachedTowardsFallback(BlockState state, Level world, BlockPos pos, Direction direction) {
 		Block block = state.getBlock();
-		if (block instanceof LadderBlock)
+
+		if (block instanceof LadderBlock) {
 			return state.getValue(LadderBlock.FACING) == direction.getOpposite();
-		if (block instanceof WallTorchBlock)
+		}
+		if (block instanceof WallTorchBlock) {
 			return state.getValue(WallTorchBlock.FACING) == direction.getOpposite();
-		if (block instanceof WallSignBlock)
+		}
+		if (block instanceof WallSignBlock) {
 			return state.getValue(WallSignBlock.FACING) == direction.getOpposite();
-		if (block instanceof StandingSignBlock)
-			return direction == Direction.DOWN;
-		if (block instanceof BasePressurePlateBlock)
-			return direction == Direction.DOWN;
-		if (block instanceof DoorBlock) {
-			if (state.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER && direction == Direction.UP)
-				return true;
+		}
+		if (block instanceof StandingSignBlock) {
 			return direction == Direction.DOWN;
 		}
-		if (block instanceof BedBlock) {
-			Direction facing = state.getValue(BedBlock.FACING);
-			if (state.getValue(BedBlock.PART) == BedPart.HEAD)
-				facing = facing.getOpposite();
-			return direction == facing;
+		if (block instanceof BasePressurePlateBlock) {
+			return direction == Direction.DOWN;
 		}
-		if (block instanceof RedstoneLinkBlock)
-			return direction.getOpposite() == state.getValue(RedstoneLinkBlock.FACING);
-		if (block instanceof FlowerPotBlock)
-			return direction == Direction.DOWN;
-		if (block instanceof DiodeBlock)
-			return direction == Direction.DOWN;
-		if (block instanceof RedStoneWireBlock)
-			return direction == Direction.DOWN;
-		if (block instanceof WoolCarpetBlock)
-			return direction == Direction.DOWN;
-		if (block instanceof RedstoneWallTorchBlock)
-			return state.getValue(RedstoneWallTorchBlock.FACING) == direction.getOpposite();
-		if (block instanceof TorchBlock)
-			return direction == Direction.DOWN;
-		if (block instanceof FaceAttachedHorizontalDirectionalBlock) {
-			AttachFace attachFace = state.getValue(FaceAttachedHorizontalDirectionalBlock.FACE);
-			if (attachFace == AttachFace.CEILING)
-				return direction == Direction.UP;
-			if (attachFace == AttachFace.FLOOR)
-				return direction == Direction.DOWN;
-			if (attachFace == AttachFace.WALL)
-				return direction.getOpposite() == state.getValue(FaceAttachedHorizontalDirectionalBlock.FACING);
+		if (block instanceof FaceAttachedHorizontalDirectionalBlock && !(block instanceof GrindstoneBlock)) {
+			return true;
 		}
-		if (state.hasProperty(BlockStateProperties.HANGING))
-			return direction == (state.getValue(BlockStateProperties.HANGING) ? Direction.UP : Direction.DOWN);
-		if (block instanceof BaseRailBlock)
-			return direction == Direction.DOWN;
-		if (block instanceof AttachedActorBlock)
-			return direction == state.getValue(HarvesterBlock.FACING)
-				.getOpposite();
-		if (block instanceof HandCrankBlock)
-			return direction == state.getValue(HandCrankBlock.FACING)
-				.getOpposite();
-		if (block instanceof NozzleBlock)
-			return direction == state.getValue(NozzleBlock.FACING)
-				.getOpposite();
-		if (block instanceof BellBlock) {
-			BellAttachType attachment = state.getValue(BlockStateProperties.BELL_ATTACHMENT);
-			if (attachment == BellAttachType.FLOOR)
-				return direction == Direction.DOWN;
-			if (attachment == BellAttachType.CEILING)
-				return direction == Direction.UP;
-			return direction == state.getValue(HorizontalDirectionalBlock.FACING);
+		if (block instanceof CartAssemblerBlock) {
+			return false;
 		}
-		if (state.getBlock() instanceof SailBlock)
-			return direction.getAxis() != state.getValue(SailBlock.FACING)
-				.getAxis();
-		if (state.getBlock() instanceof FluidTankBlock)
-			return ConnectivityHandler.isConnected(world, pos, pos.relative(direction));
-		if (state.getBlock() instanceof ItemVaultBlock)
-			return ConnectivityHandler.isConnected(world, pos, pos.relative(direction));
-		if (AllBlocks.STICKER.has(state) && state.getValue(StickerBlock.EXTENDED)) {
-			return direction == state.getValue(StickerBlock.FACING)
-				&& !isNotSupportive(world.getBlockState(pos.relative(direction)), direction.getOpposite());
+		if (block instanceof BaseRailBlock) {
+			return true;
 		}
-		if (block instanceof AbstractBogeyBlock<?> bogey)
-			return bogey.getStickySurfaces(world, pos, state)
-				.contains(direction);
-		if (block instanceof WhistleBlock)
-			return direction == (state.getValue(WhistleBlock.WALL) ? state.getValue(WhistleBlock.FACING)
-				: Direction.DOWN);
-		if (block instanceof WhistleExtenderBlock)
-			return direction == Direction.DOWN;
+		if (block instanceof DiodeBlock) {
+			return true;
+		}
+		if (block instanceof RedStoneWireBlock) {
+			return true;
+		}
+		if (block instanceof WoolCarpetBlock) {
+			return true;
+		}
+		if (block instanceof WhistleBlock) {
+			return true;
+		}
+		if (block instanceof WhistleExtenderBlock) {
+			return true;
+		}
+		if (block instanceof AbstractBogeyBlock) {
+			AbstractBogeyBlock<?> bogey = (AbstractBogeyBlock<?>) block;
+			return bogey.getStickySurfaces(world, pos, state).contains(direction);
+		}
+
 		return false;
 	}
 
 	private static boolean isNotSupportiveFallback(BlockState state, Direction facing) {
-		if (AllBlocks.MECHANICAL_DRILL.has(state))
-			return state.getValue(BlockStateProperties.FACING) == facing;
-		if (AllBlocks.MECHANICAL_BEARING.has(state))
-			return state.getValue(BlockStateProperties.FACING) == facing;
+		Block block = state.getBlock();
 
-		if (AllBlocks.CART_ASSEMBLER.has(state))
-			return Direction.DOWN == facing;
-		if (AllBlocks.MECHANICAL_SAW.has(state))
-			return state.getValue(BlockStateProperties.FACING) == facing;
-		if (AllBlocks.PORTABLE_STORAGE_INTERFACE.has(state))
-			return state.getValue(PortableStorageInterfaceBlock.FACING) == facing;
-		if (state.getBlock() instanceof AttachedActorBlock && !AllBlocks.MECHANICAL_ROLLER.has(state))
-			return state.getValue(BlockStateProperties.HORIZONTAL_FACING) == facing;
-		if (AllBlocks.ROPE_PULLEY.has(state))
-			return facing == Direction.DOWN;
-		if (state.getBlock() instanceof WoolCarpetBlock)
-			return facing == Direction.UP;
-		if (state.getBlock() instanceof SailBlock)
-			return facing.getAxis() == state.getValue(SailBlock.FACING)
-				.getAxis();
-		if (AllBlocks.PISTON_EXTENSION_POLE.has(state))
-			return facing.getAxis() != state.getValue(BlockStateProperties.FACING)
-				.getAxis();
-		if (AllBlocks.MECHANICAL_PISTON_HEAD.has(state))
-			return facing.getAxis() != state.getValue(BlockStateProperties.FACING)
-				.getAxis();
-		if (AllBlocks.STICKER.has(state) && !state.getValue(StickerBlock.EXTENDED))
-			return facing == state.getValue(StickerBlock.FACING);
-		if (state.getBlock() instanceof SlidingDoorBlock)
+		if (block instanceof AbstractChassisBlock) {
 			return false;
-		return isBrittle(state);
-	}
-
-	// Check classes
-
-	public static interface MovementNecessaryCheck {
-		public CheckResult isMovementNecessary(BlockState state, Level world, BlockPos pos);
-	}
-
-	public static interface MovementAllowedCheck {
-		public CheckResult isMovementAllowed(BlockState state, Level world, BlockPos pos);
-	}
-
-	public static interface BrittleCheck {
-		/**
-		 * Brittle blocks will be collected first, as they may break when other blocks
-		 * are removed before them
-		 */
-		public CheckResult isBrittle(BlockState state);
-	}
-
-	public static interface AttachedCheck {
-		/**
-		 * Attached blocks will move if blocks they are attached to are moved
-		 */
-		public CheckResult isBlockAttachedTowards(BlockState state, Level world, BlockPos pos, Direction direction);
-	}
-
-	public static interface NotSupportiveCheck {
-		/**
-		 * Non-Supportive blocks will not continue a chain of blocks picked up by e.g. a
-		 * piston
-		 */
-		public CheckResult isNotSupportive(BlockState state, Direction direction);
-	}
-
-	public static interface AllChecks
-		extends MovementNecessaryCheck, MovementAllowedCheck, BrittleCheck, AttachedCheck, NotSupportiveCheck {
-	}
-
-	public static enum CheckResult {
-		SUCCESS, FAIL, PASS;
-
-		public Boolean toBoolean() {
-			return this == PASS ? null : (this == SUCCESS ? true : false);
+		}
+		if (block instanceof MovingContraptionBlock) {
+			return false;
+		}
+		if (block instanceof MechanicalPistonBlock) {
+			return false;
+		}
+		if (block instanceof MechanicalBearingBlock) {
+			return false;
+		}
+		if (block instanceof ClockworkBearingBlock) {
+			return false;
+		}
+		if (block instanceof PulleyBlock) {
+			return false;
+		}
+		if (block instanceof RedstoneLinkBlock) {
+			return false;
+		}
+		if (block instanceof AbstractBogeyBlock) {
+			return false;
 		}
 
-		public static CheckResult of(boolean b) {
-			return b ? SUCCESS : FAIL;
-		}
-
-		public static CheckResult of(Boolean b) {
-			return b == null ? PASS : (b ? SUCCESS : FAIL);
-		}
+		return true;
 	}
-
 }

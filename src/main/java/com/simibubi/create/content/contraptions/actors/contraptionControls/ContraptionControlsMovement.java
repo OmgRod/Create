@@ -29,28 +29,35 @@ public class ContraptionControlsMovement implements MovementBehaviour {
 
 	@Override
 	public void startMoving(MovementContext context) {
-		if (context.contraption instanceof ElevatorContraption && context.blockEntityData != null)
-			context.blockEntityData.remove("Filter");
+		if (context.contraption instanceof ElevatorContraption) {
+			if (context.blockEntityData != null) {
+				context.blockEntityData.remove("Filter");
+			}
+		}
 	}
 
 	@Override
 	public void stopMoving(MovementContext context) {
 		ItemStack filter = getFilter(context);
-		if (filter != null)
-			context.blockEntityData.putBoolean("Disabled", context.contraption.isActorTypeDisabled(filter)
-				|| context.contraption.isActorTypeDisabled(ItemStack.EMPTY));
+		if (filter != null) {
+			boolean isDisabled = context.contraption.isActorTypeDisabled(filter)
+					|| context.contraption.isActorTypeDisabled(ItemStack.EMPTY);
+			context.blockEntityData.putBoolean("Disabled", isDisabled);
+		}
 	}
 
 	public static boolean isSameFilter(ItemStack stack1, ItemStack stack2) {
-		if (stack1.isEmpty() && stack2.isEmpty())
+		if (stack1.isEmpty() && stack2.isEmpty()) {
 			return true;
+		}
 		return ItemHandlerHelper.canItemStacksStack(stack1, stack2);
 	}
 
 	public static ItemStack getFilter(MovementContext ctx) {
 		CompoundTag blockEntityData = ctx.blockEntityData;
-		if (blockEntityData == null)
+		if (blockEntityData == null) {
 			return null;
+		}
 		return ItemStack.of(blockEntityData.getCompound("Filter"));
 	}
 
@@ -60,32 +67,38 @@ public class ContraptionControlsMovement implements MovementBehaviour {
 
 	@Override
 	public void tick(MovementContext ctx) {
-		if (!ctx.world.isClientSide())
+		if (!ctx.world.isClientSide()) {
 			return;
+		}
 
 		Contraption contraption = ctx.contraption;
-		if (!(contraption instanceof ElevatorContraption ec)) {
-			if (!(contraption.presentBlockEntities.get(ctx.localPos) instanceof ContraptionControlsBlockEntity cbe))
+		if (!(contraption instanceof ElevatorContraption)) {
+			if (!(contraption.presentBlockEntities.get(ctx.localPos) instanceof ContraptionControlsBlockEntity)) {
 				return;
+			}
+			ContraptionControlsBlockEntity cbe = (ContraptionControlsBlockEntity) contraption.presentBlockEntities.get(ctx.localPos);
 			ItemStack filter = getFilter(ctx);
-			int value =
-				contraption.isActorTypeDisabled(filter) || contraption.isActorTypeDisabled(ItemStack.EMPTY) ? 4 * 45
-					: 0;
+			int value = contraption.isActorTypeDisabled(filter) || contraption.isActorTypeDisabled(ItemStack.EMPTY) ? 4 * 45 : 0;
 			cbe.indicator.setValue(value);
 			cbe.indicator.updateChaseTarget(value);
 			cbe.tickAnimations();
 			return;
 		}
 
-		if (!(ctx.temporaryData instanceof ElevatorFloorSelection))
+		ElevatorContraption ec = (ElevatorContraption) contraption;
+
+		if (!(ctx.temporaryData instanceof ElevatorFloorSelection)) {
 			ctx.temporaryData = new ElevatorFloorSelection();
+		}
 
 		ElevatorFloorSelection efs = (ElevatorFloorSelection) ctx.temporaryData;
 		tickFloorSelection(efs, ec);
 
-		if (!(contraption.presentBlockEntities.get(ctx.localPos) instanceof ContraptionControlsBlockEntity cbe))
+		if (!(contraption.presentBlockEntities.get(ctx.localPos) instanceof ContraptionControlsBlockEntity)) {
 			return;
+		}
 
+		ContraptionControlsBlockEntity cbe = (ContraptionControlsBlockEntity) contraption.presentBlockEntities.get(ctx.localPos);
 		cbe.tickAnimations();
 
 		int currentY = (int) Math.round(contraption.entity.getY() + ec.getContactYOffset());
@@ -127,21 +140,18 @@ public class ContraptionControlsMovement implements MovementBehaviour {
 		efs.currentIndex = Mth.clamp(efs.currentIndex, 0, ec.namesList.size() - 1);
 		IntAttached<Couple<String>> entry = ec.namesList.get(efs.currentIndex);
 		efs.currentTargetY = entry.getFirst();
-		efs.currentShortName = entry.getSecond()
-			.getFirst();
-		efs.currentLongName = entry.getSecond()
-			.getSecond();
+		efs.currentShortName = entry.getSecond().getFirst();
+		efs.currentLongName = entry.getSecond().getSecond();
 		efs.targetYEqualsSelection = efs.currentTargetY == ec.clientYTarget;
 
-		if (ec.isTargetUnreachable(efs.currentTargetY))
-			efs.currentLongName = Lang.translate("contraption.controls.floor_unreachable")
-				.string();
+		if (ec.isTargetUnreachable(efs.currentTargetY)) {
+			efs.currentLongName = Lang.translate("contraption.controls.floor_unreachable").string();
+		}
 	}
 
 	@Override
 	@OnlyIn(Dist.CLIENT)
-	public void renderInContraption(MovementContext ctx, VirtualRenderWorld renderWorld, ContraptionMatrices matrices,
-		MultiBufferSource buffer) {
+	public void renderInContraption(MovementContext ctx, VirtualRenderWorld renderWorld, ContraptionMatrices matrices, MultiBufferSource buffer) {
 		ContraptionControlsRenderer.renderInContraption(ctx, renderWorld, matrices, buffer);
 	}
 

@@ -28,9 +28,10 @@ public class AttachedComputerPacket extends BlockEntityDataPacket<SyncedBlockEnt
 
 	@Override
 	protected void handlePacket(SyncedBlockEntity blockEntity) {
-		if (blockEntity instanceof SmartBlockEntity sbe) {
+		if (blockEntity instanceof SmartBlockEntity) {
+			SmartBlockEntity sbe = (SmartBlockEntity) blockEntity;
 			sbe.getBehaviour(AbstractComputerBehaviour.TYPE)
-				.setHasAttachedComputer(hasAttachedComputer);
+					.setHasAttachedComputer(hasAttachedComputer);
 		}
 	}
 

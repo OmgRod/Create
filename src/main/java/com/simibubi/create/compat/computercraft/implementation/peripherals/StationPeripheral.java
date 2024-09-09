@@ -155,8 +155,13 @@ public class StationPeripheral extends SyncedPeripheral<StationBlockEntity> {
 			throw new LuaException("Not a valid schedule");
 
 		Object entries = arguments.getTable(0).get("entries");
-		if (entries instanceof Map<?, ?> map && map.isEmpty())
-			throw new LuaException("Schedule must have at least one entry");
+		if (entries instanceof Map) {
+			Map<?, ?> map = (Map<?, ?>) entries;
+			if (map.isEmpty())
+				throw new LuaException("Schedule must have at least one entry");
+		} else {
+			throw new LuaException("Invalid schedule entries");
+		}
 
 		Train train = getTrainOrThrow();
 		Schedule schedule = Schedule.fromTag(toCompoundTag(new CreateLuaTable(arguments.getTable(0))));
@@ -225,53 +230,45 @@ public class StationPeripheral extends SyncedPeripheral<StationBlockEntity> {
 	}
 
 	private static @NotNull Tag toNBTTag(@Nullable String key, Object value) throws LuaException {
-		if (value instanceof Boolean v)
-			return ByteTag.valueOf(v);
-		else if (value instanceof Byte || (key != null && key.equals("count")))
+		if (value instanceof Boolean) {
+			return ByteTag.valueOf((Boolean) value);
+		} else if (value instanceof Byte || (key != null && key.equals("count"))) {
 			return ByteTag.valueOf(((Number) value).byteValue());
-		else if (value instanceof Number v) {
-			// If number is numerical integer
-			if (v.intValue() == v.doubleValue())
+		} else if (value instanceof Number) {
+			Number v = (Number) value;
+			if (v.intValue() == v.doubleValue()) {
 				return IntTag.valueOf(v.intValue());
-			else
+			} else {
 				return DoubleTag.valueOf(v.doubleValue());
-
-		} else if (value instanceof String v)
-			return StringTag.valueOf(v);
-		else if (value instanceof Map<?, ?> v && v.containsKey(1.0)) { // List
-			ListTag list = new ListTag();
-			for (double i = 1; i <= v.size(); i++) {
-				if (v.get(i) != null)
-					list.add(toNBTTag(null, v.get(i)));
 			}
-
-			return list;
-
-		} else if (value instanceof Map<?, ?> v) { // Table/Map
-			CompoundTag compound = new CompoundTag();
-			for (Object objectKey : v.keySet()) {
-				if (!(objectKey instanceof String compoundKey))
-					throw new LuaException("table key is not of type string");
-
-				compound.put(
-						// Items serialize their resource location as "id" and not as "Id".
-						// This check is needed to see if the 'i' should be left lowercase or not.
-						// Items store "count" in the same compound tag, so we can check for its presence to see if this is a serialized item
-						compoundKey.equals("id") && v.containsKey("count") ? "id" : StringHelper.snakeCaseToCamelCase(compoundKey),
-						toNBTTag(compoundKey, v.get(compoundKey))
-				);
+		} else if (value instanceof String) {
+			return StringTag.valueOf((String) value);
+		} else if (value instanceof Map) {
+			Map<?, ?> v = (Map<?, ?>) value;
+			if (v.containsKey(1.0)) { // List
+				ListTag list = new ListTag();
+				for (double i = 1; i <= v.size(); i++) {
+					if (v.get(i) != null) {
+						list.add(toNBTTag(null, v.get(i)));
+					}
+				}
+				return list;
+			} else { // Table/Map
+				CompoundTag compound = new CompoundTag();
+				for (Object objectKey : v.keySet()) {
+					if (!(objectKey instanceof String)) {
+						throw new LuaException("table key is not of type string");
+					}
+					String compoundKey = (String) objectKey;
+					compound.put(
+							compoundKey.equals("id") && v.containsKey("count") ? "id" : StringHelper.snakeCaseToCamelCase(compoundKey),
+							toNBTTag(compoundKey, v.get(compoundKey))
+					);
+				}
+				return compound;
 			}
-
-			return compound;
 		}
 
 		throw new LuaException("unknown object type " + value.getClass().getName());
 	}
-
-	@NotNull
-	@Override
-	public String getType() {
-		return "Create_Station";
-	}
-
 }

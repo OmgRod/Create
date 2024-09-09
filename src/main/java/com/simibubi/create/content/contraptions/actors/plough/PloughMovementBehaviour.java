@@ -18,8 +18,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.level.ClipContext.Block;
-import net.minecraft.world.level.ClipContext.Fluid;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.AnvilBlock;
 import net.minecraft.world.level.block.Blocks;
@@ -40,7 +38,7 @@ public class PloughMovementBehaviour extends BlockBreakingMovementBehaviour {
 	@Override
 	public boolean isActive(MovementContext context) {
 		return super.isActive(context)
-			&& !VecHelper.isVecPointingTowards(context.relativeMotion, context.state.getValue(PloughBlock.FACING)
+				&& !VecHelper.isVecPointingTowards(context.relativeMotion, context.state.getValue(PloughBlock.FACING)
 				.getOpposite());
 	}
 
@@ -60,7 +58,7 @@ public class PloughMovementBehaviour extends BlockBreakingMovementBehaviour {
 		if (player == null)
 			return;
 
-		BlockHitResult ray = world.clip(new ClipContext(vec, vec.add(0, -1, 0), Block.OUTLINE, Fluid.NONE, player));
+		BlockHitResult ray = world.clip(new ClipContext(vec, vec.add(0, -1, 0), ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
 		if (ray.getType() != Type.BLOCK)
 			return;
 
@@ -71,23 +69,25 @@ public class PloughMovementBehaviour extends BlockBreakingMovementBehaviour {
 	@Override
 	protected void throwEntity(MovementContext context, Entity entity) {
 		super.throwEntity(context, entity);
-		if (!(entity instanceof FallingBlockEntity fbe))
+		if (!(entity instanceof FallingBlockEntity)) {
 			return;
-		if (!(fbe.getBlockState()
-			.getBlock() instanceof AnvilBlock))
+		}
+		FallingBlockEntity fbe = (FallingBlockEntity) entity;
+		if (!(fbe.getBlockState().getBlock() instanceof AnvilBlock)) {
 			return;
-		if (entity.getDeltaMovement()
-			.length() < 0.25f)
+		}
+		if (entity.getDeltaMovement().length() < 0.25f) {
 			return;
+		}
 		entity.level().getEntitiesOfClass(Player.class, new AABB(entity.blockPosition()).inflate(32))
-			.forEach(AllAdvancements.ANVIL_PLOUGH::awardTo);
+				.forEach(AllAdvancements.ANVIL_PLOUGH::awardTo);
 	}
 
 	@Override
 	public Vec3 getActiveAreaOffset(MovementContext context) {
 		return Vec3.atLowerCornerOf(context.state.getValue(PloughBlock.FACING)
-			.getNormal())
-			.scale(.45);
+						.getNormal())
+				.scale(.45);
 	}
 
 	@Override
@@ -100,7 +100,7 @@ public class PloughMovementBehaviour extends BlockBreakingMovementBehaviour {
 		if (state.isAir())
 			return false;
 		if (world.getBlockState(breakingPos.below())
-			.getBlock() instanceof FarmBlock)
+				.getBlock() instanceof FarmBlock)
 			return false;
 		if (state.getBlock() instanceof LiquidBlock)
 			return false;
@@ -113,7 +113,7 @@ public class PloughMovementBehaviour extends BlockBreakingMovementBehaviour {
 		if (state.getBlock() instanceof FakeTrackBlock)
 			return false;
 		return state.getCollisionShape(world, breakingPos)
-			.isEmpty();
+				.isEmpty();
 	}
 
 	@Override
@@ -123,18 +123,19 @@ public class PloughMovementBehaviour extends BlockBreakingMovementBehaviour {
 		if (brokenState.getBlock() == Blocks.SNOW && context.world instanceof ServerLevel) {
 			ServerLevel world = (ServerLevel) context.world;
 			brokenState.getDrops(new LootParams.Builder(world).withParameter(LootContextParams.BLOCK_STATE, brokenState)
-				.withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(pos))
-				.withParameter(LootContextParams.THIS_ENTITY, getPlayer(context))
-				.withParameter(LootContextParams.TOOL, new ItemStack(Items.IRON_SHOVEL)))
-				.forEach(s -> dropItem(context, s));
+							.withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(pos))
+							.withParameter(LootContextParams.THIS_ENTITY, getPlayer(context))
+							.withParameter(LootContextParams.TOOL, new ItemStack(Items.IRON_SHOVEL)))
+					.forEach(s -> dropItem(context, s));
 		}
 	}
 
 	@Override
 	public void stopMoving(MovementContext context) {
 		super.stopMoving(context);
-		if (context.temporaryData instanceof PloughFakePlayer)
+		if (context.temporaryData instanceof PloughFakePlayer) {
 			((PloughFakePlayer) context.temporaryData).discard();
+		}
 	}
 
 	private PloughFakePlayer getPlayer(MovementContext context) {

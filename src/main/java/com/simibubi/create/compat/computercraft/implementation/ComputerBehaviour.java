@@ -37,21 +37,33 @@ public class ComputerBehaviour extends AbstractComputerBehaviour {
 	}
 
 	public static NonNullSupplier<IPeripheral> getPeripheralFor(SmartBlockEntity be) {
-		if (be instanceof SpeedControllerBlockEntity scbe)
+		if (be instanceof SpeedControllerBlockEntity) {
+			SpeedControllerBlockEntity scbe = (SpeedControllerBlockEntity) be;
 			return () -> new SpeedControllerPeripheral(scbe, scbe.targetSpeed);
-		if (be instanceof DisplayLinkBlockEntity dlbe)
+		}
+		if (be instanceof DisplayLinkBlockEntity) {
+			DisplayLinkBlockEntity dlbe = (DisplayLinkBlockEntity) be;
 			return () -> new DisplayLinkPeripheral(dlbe);
-		if (be instanceof SequencedGearshiftBlockEntity sgbe)
+		}
+		if (be instanceof SequencedGearshiftBlockEntity) {
+			SequencedGearshiftBlockEntity sgbe = (SequencedGearshiftBlockEntity) be;
 			return () -> new SequencedGearshiftPeripheral(sgbe);
-		if (be instanceof SpeedGaugeBlockEntity sgbe)
+		}
+		if (be instanceof SpeedGaugeBlockEntity) {
+			SpeedGaugeBlockEntity sgbe = (SpeedGaugeBlockEntity) be;
 			return () -> new SpeedGaugePeripheral(sgbe);
-		if (be instanceof StressGaugeBlockEntity sgbe)
+		}
+		if (be instanceof StressGaugeBlockEntity) {
+			StressGaugeBlockEntity sgbe = (StressGaugeBlockEntity) be;
 			return () -> new StressGaugePeripheral(sgbe);
-		if (be instanceof StationBlockEntity sbe)
+		}
+		if (be instanceof StationBlockEntity) {
+			StationBlockEntity sbe = (StationBlockEntity) be;
 			return () -> new StationPeripheral(sbe);
+		}
 
 		throw new IllegalArgumentException(
-			"No peripheral available for " + ForgeRegistries.BLOCK_ENTITY_TYPES.getKey(be.getType()));
+				"No peripheral available for " + ForgeRegistries.BLOCK_ENTITY_TYPES.getKey(be.getType()));
 	}
 
 	@Override

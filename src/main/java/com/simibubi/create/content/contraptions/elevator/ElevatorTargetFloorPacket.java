@@ -36,30 +36,37 @@ public class ElevatorTargetFloorPacket extends SimplePacketBase {
 	public boolean handle(Context context) {
 		context.enqueueWork(() -> {
 			ServerPlayer sender = context.getSender();
-			Entity entityByID = sender.serverLevel()
-				.getEntity(entityId);
-			if (!(entityByID instanceof AbstractContraptionEntity ace))
+			Entity entityByID = sender.serverLevel().getEntity(entityId);
+			if (!(entityByID instanceof AbstractContraptionEntity)) {
 				return;
-			if (!(ace.getContraption() instanceof ElevatorContraption ec))
+			}
+			AbstractContraptionEntity ace = (AbstractContraptionEntity) entityByID;
+			if (!(ace.getContraption() instanceof ElevatorContraption)) {
 				return;
-			if (ace.distanceToSqr(sender) > 50 * 50)
+			}
+			ElevatorContraption ec = (ElevatorContraption) ace.getContraption();
+			if (ace.distanceToSqr(sender) > 50 * 50) {
 				return;
+			}
 
 			Level level = sender.level();
 			ElevatorColumn elevatorColumn = ElevatorColumn.get(level, ec.getGlobalColumn());
-			if (!elevatorColumn.contacts.contains(targetY))
+			if (!elevatorColumn.contacts.contains(targetY)) {
 				return;
-			if (ec.isTargetUnreachable(targetY))
+			}
+			if (ec.isTargetUnreachable(targetY)) {
 				return;
+			}
 
 			BlockPos pos = elevatorColumn.contactAt(targetY);
 			BlockState blockState = level.getBlockState(pos);
-			if (!(blockState.getBlock() instanceof ElevatorContactBlock ecb))
+			if (!(blockState.getBlock() instanceof ElevatorContactBlock)) {
 				return;
+			}
+			ElevatorContactBlock ecb = (ElevatorContactBlock) blockState.getBlock();
 
 			ecb.callToContactAndUpdate(elevatorColumn, blockState, level, pos, false);
 		});
 		return true;
 	}
-
 }

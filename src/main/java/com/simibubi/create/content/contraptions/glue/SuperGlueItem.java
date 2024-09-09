@@ -29,15 +29,17 @@ public class SuperGlueItem extends Item {
 	public static void glueItemAlwaysPlacesWhenUsed(PlayerInteractEvent.RightClickBlock event) {
 		if (event.getHitVec() != null) {
 			BlockState blockState = event.getLevel()
-				.getBlockState(event.getHitVec()
-					.getBlockPos());
-			if (blockState.getBlock()instanceof AbstractChassisBlock cb)
+					.getBlockState(event.getHitVec()
+							.getBlockPos());
+			if (blockState.getBlock() instanceof AbstractChassisBlock) {
+				AbstractChassisBlock cb = (AbstractChassisBlock) blockState.getBlock();
 				if (cb.getGlueableSide(blockState, event.getFace()) != null)
 					return;
+			}
 		}
 
 		if (event.getItemStack()
-			.getItem() instanceof SuperGlueItem)
+				.getItem() instanceof SuperGlueItem)
 			event.setUseBlock(Result.DENY);
 	}
 
@@ -62,7 +64,7 @@ public class SuperGlueItem extends Item {
 		Vec3 vec = Vec3.atLowerCornerOf(direction.getNormal());
 		Vec3 plane = VecHelper.axisAlingedPlaneOf(vec);
 		Vec3 facePos = VecHelper.getCenterOf(pos)
-			.add(vec.scale(.5f));
+				.add(vec.scale(.5f));
 
 		float distance = fullBlock ? 1f : .25f + .25f * (world.random.nextFloat() - .5f);
 		plane = plane.scale(distance);
@@ -71,15 +73,13 @@ public class SuperGlueItem extends Item {
 		for (int i = fullBlock ? 40 : 15; i > 0; i--) {
 			Vec3 offset = VecHelper.rotate(plane, 360 * world.random.nextFloat(), direction.getAxis());
 			Vec3 motion = offset.normalize()
-				.scale(1 / 16f);
+					.scale(1 / 16f);
 			if (fullBlock)
 				offset =
-					new Vec3(Mth.clamp(offset.x, -.5, .5), Mth.clamp(offset.y, -.5, .5), Mth.clamp(offset.z, -.5, .5));
+						new Vec3(Mth.clamp(offset.x, -.5, .5), Mth.clamp(offset.y, -.5, .5), Mth.clamp(offset.z, -.5, .5));
 			Vec3 particlePos = facePos.add(offset);
 			world.addParticle(new ItemParticleOption(ParticleTypes.ITEM, stack), particlePos.x, particlePos.y,
-				particlePos.z, motion.x, motion.y, motion.z);
+					particlePos.z, motion.x, motion.y, motion.z);
 		}
-
 	}
-
 }

@@ -30,8 +30,10 @@ public enum ContraptionMovementSetting {
 
 	@Nullable
 	public static ContraptionMovementSetting get(Block block) {
-		if (block instanceof IMovementSettingProvider provider)
+		if (block instanceof IMovementSettingProvider) {
+			IMovementSettingProvider provider = (IMovementSettingProvider) block;
 			return provider.getContraptionMovementSetting();
+		}
 		Supplier<ContraptionMovementSetting> supplier = SETTING_SUPPLIERS.get(block);
 		if (supplier == null)
 			return null;

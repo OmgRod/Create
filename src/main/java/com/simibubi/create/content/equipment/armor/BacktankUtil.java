@@ -74,13 +74,15 @@ public class BacktankUtil {
 		float newAir = Math.max(air - i, 0);
 		tag.putFloat("Air", Math.min(newAir, maxAir));
 		backtank.setTag(tag);
-
-		if (!(entity instanceof ServerPlayer player))
+	
+		if (!(entity instanceof ServerPlayer)) {
 			return;
+		}
+		ServerPlayer player = (ServerPlayer) entity;
 		
 		sendWarning(player, air, newAir, maxAir / 10f);
 		sendWarning(player, air, newAir, 1);
-	}
+	}	
 
 	private static void sendWarning(ServerPlayer player, float air, float newAir, float threshold) {
 		if (newAir > threshold)

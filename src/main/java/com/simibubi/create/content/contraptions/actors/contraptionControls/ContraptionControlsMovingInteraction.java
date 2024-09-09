@@ -30,7 +30,7 @@ public class ContraptionControlsMovingInteraction extends MovingInteractionBehav
 
 	@Override
 	public boolean handlePlayerInteraction(Player player, InteractionHand activeHand, BlockPos localPos,
-		AbstractContraptionEntity contraptionEntity) {
+										   AbstractContraptionEntity contraptionEntity) {
 		Contraption contraption = contraptionEntity.getContraption();
 
 		MutablePair<StructureBlockInfo, MovementContext> actor = contraption.getActorAt(localPos);
@@ -39,11 +39,17 @@ public class ContraptionControlsMovingInteraction extends MovingInteractionBehav
 		MovementContext ctx = actor.right;
 		if (ctx == null)
 			return false;
-		if (contraption instanceof ElevatorContraption ec)
+
+		if (contraption instanceof ElevatorContraption) {
+			ElevatorContraption ec = (ElevatorContraption) contraption;
 			return elevatorInteraction(localPos, contraptionEntity, ec, ctx);
+		}
+
 		if (contraptionEntity.level().isClientSide()) {
-			if (contraption.presentBlockEntities.get(ctx.localPos) instanceof ContraptionControlsBlockEntity cbe)
+			if (contraption.presentBlockEntities.get(ctx.localPos) instanceof ContraptionControlsBlockEntity) {
+				ContraptionControlsBlockEntity cbe = (ContraptionControlsBlockEntity) contraption.presentBlockEntities.get(ctx.localPos);
 				cbe.pressButton();
+			}
 			return true;
 		}
 
@@ -96,18 +102,18 @@ public class ContraptionControlsMovingInteraction extends MovingInteractionBehav
 		send(contraptionEntity, filter, disable);
 
 		AllSoundEvents.CONTROLLER_CLICK.play(player.level(), null,
-			BlockPos.containing(contraptionEntity.toGlobalVector(Vec3.atCenterOf(localPos), 1)), 1, disable ? 0.8f : 1.5f);
+				BlockPos.containing(contraptionEntity.toGlobalVector(Vec3.atCenterOf(localPos), 1)), 1, disable ? 0.8f : 1.5f);
 
 		return true;
 	}
 
 	private void send(AbstractContraptionEntity contraptionEntity, ItemStack filter, boolean disable) {
 		AllPackets.getChannel().send(PacketDistributor.TRACKING_ENTITY.with(() -> contraptionEntity),
-			new ContraptionDisableActorPacket(contraptionEntity.getId(), filter, !disable));
+				new ContraptionDisableActorPacket(contraptionEntity.getId(), filter, !disable));
 	}
 
 	private boolean elevatorInteraction(BlockPos localPos, AbstractContraptionEntity contraptionEntity,
-		ElevatorContraption contraption, MovementContext ctx) {
+										ElevatorContraption contraption, MovementContext ctx) {
 		Level level = contraptionEntity.level();
 		if (!level.isClientSide()) {
 			BlockPos pos = BlockPos.containing(contraptionEntity.toGlobalVector(Vec3.atCenterOf(localPos), 1));
@@ -115,15 +121,19 @@ public class ContraptionControlsMovingInteraction extends MovingInteractionBehav
 			AllSoundEvents.CONTRAPTION_ASSEMBLE.play(level, null, pos, 0.75f, 0.8f);
 			return true;
 		}
-		if (!(ctx.temporaryData instanceof ElevatorFloorSelection efs))
+		if (!(ctx.temporaryData instanceof ElevatorFloorSelection)) {
 			return false;
-		if (efs.currentTargetY == contraption.clientYTarget)
+		}
+		ElevatorFloorSelection efs = (ElevatorFloorSelection) ctx.temporaryData;
+		if (efs.currentTargetY == contraption.clientYTarget) {
 			return true;
+		}
 
 		AllPackets.getChannel().sendToServer(new ElevatorTargetFloorPacket(contraptionEntity, efs.currentTargetY));
-		if (contraption.presentBlockEntities.get(ctx.localPos) instanceof ContraptionControlsBlockEntity cbe)
+		if (contraption.presentBlockEntities.get(ctx.localPos) instanceof ContraptionControlsBlockEntity) {
+			ContraptionControlsBlockEntity cbe = (ContraptionControlsBlockEntity) contraption.presentBlockEntities.get(ctx.localPos);
 			cbe.pressButton();
+		}
 		return true;
 	}
-
 }

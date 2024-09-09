@@ -31,15 +31,16 @@ public class DivingBootsItem extends BaseArmorItem {
 	}
 
 	public static ItemStack getWornItem(Entity entity) {
-		if (!(entity instanceof LivingEntity livingEntity)) {
+		if (!(entity instanceof LivingEntity)) {
 			return ItemStack.EMPTY;
 		}
+		LivingEntity livingEntity = (LivingEntity) entity;
 		ItemStack stack = livingEntity.getItemBySlot(SLOT);
 		if (!(stack.getItem() instanceof DivingBootsItem)) {
 			return ItemStack.EMPTY;
 		}
 		return stack;
-	}
+	}	
 
 	@SubscribeEvent
 	public static void accellerateDescentUnderwater(LivingTickEvent event) {

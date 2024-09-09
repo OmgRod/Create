@@ -43,10 +43,10 @@ public class ContraptionControlsRenderer extends SmartBlockEntityRenderer<Contra
 
 	@Override
 	protected void renderSafe(ContraptionControlsBlockEntity blockEntity, float pt, PoseStack ms,
-		MultiBufferSource buffer, int light, int overlay) {
+							  MultiBufferSource buffer, int light, int overlay) {
 		BlockState blockState = blockEntity.getBlockState();
 		Direction facing = blockState.getValue(ContraptionControlsBlock.FACING)
-			.getOpposite();
+				.getOpposite();
 		Vec3 buttonMovementAxis = VecHelper.rotate(new Vec3(0, 1, -.325), AngleHelper.horizontalAngle(facing), Axis.Y);
 		Vec3 buttonMovement = buttonMovementAxis.scale(-0.07f + -1 / 24f * blockEntity.button.getValue(pt));
 		Vec3 buttonOffset = buttonMovementAxis.scale(0.07f);
@@ -58,29 +58,32 @@ public class ContraptionControlsRenderer extends SmartBlockEntityRenderer<Contra
 
 		VertexConsumer vc = buffer.getBuffer(RenderType.solid());
 		CachedBufferer.partialFacing(AllPartialModels.CONTRAPTION_CONTROLS_BUTTON, blockState, facing)
-			.light(light)
-			.renderInto(ms, vc);
+				.light(light)
+				.renderInto(ms, vc);
 
 		ms.popPose();
 
 		int i = (((int) blockEntity.indicator.getValue(pt) / 45) % 8) + 8;
 		CachedBufferer.partialFacing(AllPartialModels.CONTRAPTION_CONTROLS_INDICATOR.get(i % 8), blockState, facing)
-			.light(light)
-			.renderInto(ms, vc);
+				.light(light)
+				.renderInto(ms, vc);
 	}
 
 	public static void renderInContraption(MovementContext ctx, VirtualRenderWorld renderWorld,
-		ContraptionMatrices matrices, MultiBufferSource buffer) {
+										   ContraptionMatrices matrices, MultiBufferSource buffer) {
 
-		if (!(ctx.temporaryData instanceof ElevatorFloorSelection efs))
+		if (!(ctx.temporaryData instanceof ElevatorFloorSelection)) {
 			return;
-		if (!AllBlocks.CONTRAPTION_CONTROLS.has(ctx.state))
+		}
+		ElevatorFloorSelection efs = (ElevatorFloorSelection) ctx.temporaryData;
+		if (!AllBlocks.CONTRAPTION_CONTROLS.has(ctx.state)) {
 			return;
+		}
 
 		Entity cameraEntity = Minecraft.getInstance()
-			.getCameraEntity();
+				.getCameraEntity();
 		float playerDistance = (float) (ctx.position == null || cameraEntity == null ? 0
-			: ctx.position.distanceToSqr(cameraEntity.getEyePosition()));
+				: ctx.position.distanceToSqr(cameraEntity.getEyePosition()));
 
 		float flicker = r.nextFloat();
 		Couple<Integer> couple = DyeHelper.DYE_TABLE.get(efs.targetYEqualsSelection ? DyeColor.WHITE : DyeColor.ORANGE);
@@ -98,13 +101,15 @@ public class ContraptionControlsRenderer extends SmartBlockEntityRenderer<Contra
 		ms.pushPose();
 		msr.translate(ctx.localPos);
 		msr.rotateCentered(AngleHelper.rad(AngleHelper.horizontalAngle(ctx.state.getValue(ContraptionControlsBlock.FACING))),
-			Direction.UP);
+				Direction.UP);
 		ms.translate(0.275f + 0.125f, 1, 0.5f);
 		msr.rotate(AngleHelper.rad(67.5f), Direction.WEST);
 
 		float buttondepth = -.25f;
-		if (ctx.contraption.presentBlockEntities.get(ctx.localPos) instanceof ContraptionControlsBlockEntity cbe)
+		if (ctx.contraption.presentBlockEntities.get(ctx.localPos) instanceof ContraptionControlsBlockEntity) {
+			ContraptionControlsBlockEntity cbe = (ContraptionControlsBlockEntity) ctx.contraption.presentBlockEntities.get(ctx.localPos);
 			buttondepth += -1 / 24f * cbe.button.getValue(AnimationTickHolder.getPartialTicks(renderWorld));
+		}
 
 		if (!text.isBlank() && playerDistance < 100) {
 			int actualWidth = fontRenderer.width(text);

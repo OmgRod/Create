@@ -22,7 +22,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.core.Direction.AxisDirection;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -62,14 +61,14 @@ public class SuperGlueEntity extends Entity implements IEntityAdditionalSpawnDat
 	}
 
 	public static boolean isGlued(LevelAccessor level, BlockPos blockPos, Direction direction,
-		Set<SuperGlueEntity> cached) {
+								  Set<SuperGlueEntity> cached) {
 		BlockPos targetPos = blockPos.relative(direction);
 		if (cached != null)
 			for (SuperGlueEntity glueEntity : cached)
 				if (glueEntity.contains(blockPos) && glueEntity.contains(targetPos))
 					return true;
 		for (SuperGlueEntity glueEntity : level.getEntitiesOfClass(SuperGlueEntity.class,
-			span(blockPos, targetPos).inflate(16))) {
+				span(blockPos, targetPos).inflate(16))) {
 			if (!glueEntity.contains(blockPos) || !glueEntity.contains(targetPos))
 				continue;
 			if (cached != null)
@@ -179,7 +178,7 @@ public class SuperGlueEntity extends Entity implements IEntityAdditionalSpawnDat
 		setPosRaw(x, y, z);
 		Vec3 center = bb.getCenter();
 		setBoundingBox(bb.move(-center.x, -bb.minY, -center.z)
-			.move(x, y, z));
+				.move(x, y, z));
 	}
 
 	@Override
@@ -301,11 +300,11 @@ public class SuperGlueEntity extends Entity implements IEntityAdditionalSpawnDat
 	public PushReaction getPistonPushReaction() {
 		return PushReaction.IGNORE;
 	}
-	
+
 	public void setPortalEntrancePos() {
 		portalEntrancePos = blockPosition();
 	}
-	
+
 	@Override
 	public PortalInfo findDimensionEntryPoint(ServerLevel pDestination) {
 		return super.findDimensionEntryPoint(pDestination);
@@ -314,45 +313,12 @@ public class SuperGlueEntity extends Entity implements IEntityAdditionalSpawnDat
 	public void spawnParticles() {
 		AABB bb = getBoundingBox();
 		Vec3 origin = new Vec3(bb.minX, bb.minY, bb.minZ);
-		Vec3 extents = new Vec3(bb.getXsize(), bb.getYsize(), bb.getZsize());
+		Vec3 extents = new Vec3(bb.maxX - bb.minX, bb.maxY - bb.minY, bb.maxZ - bb.minZ);
+		Vec3 color = Vec3.ZERO;
 
-		if (!(level() instanceof ServerLevel slevel))
-			return;
-
-		for (Axis axis : Iterate.axes) {
-			AxisDirection positive = AxisDirection.POSITIVE;
-			double max = axis.choose(extents.x, extents.y, extents.z);
-			Vec3 normal = Vec3.atLowerCornerOf(Direction.fromAxisAndDirection(axis, positive)
-				.getNormal());
-			for (Axis axis2 : Iterate.axes) {
-				if (axis2 == axis)
-					continue;
-				double max2 = axis2.choose(extents.x, extents.y, extents.z);
-				Vec3 normal2 = Vec3.atLowerCornerOf(Direction.fromAxisAndDirection(axis2, positive)
-					.getNormal());
-				for (Axis axis3 : Iterate.axes) {
-					if (axis3 == axis2 || axis3 == axis)
-						continue;
-					double max3 = axis3.choose(extents.x, extents.y, extents.z);
-					Vec3 normal3 = Vec3.atLowerCornerOf(Direction.fromAxisAndDirection(axis3, positive)
-						.getNormal());
-
-					for (int i = 0; i <= max * 2; i++) {
-						for (int o1 : Iterate.zeroAndOne) {
-							for (int o2 : Iterate.zeroAndOne) {
-								Vec3 v = origin.add(normal.scale(i / 2f))
-									.add(normal2.scale(max2 * o1))
-									.add(normal3.scale(max3 * o2));
-
-								slevel.sendParticles(ParticleTypes.ITEM_SLIME, v.x, v.y, v.z, 1, 0, 0, 0, 0);
-
-							}
-						}
-					}
-					break;
-				}
-				break;
-			}
+		for (int i = 0; i < 10; i++) {
+			Vec3 pos = origin.add(extents.multiply(random.nextDouble(), random.nextDouble(), random.nextDouble()));
+			level.addParticle(ParticleTypes.ITEM_SLIME, pos.x, pos.y, pos.z, color.x, color.y, color.z);
 		}
 	}
 }

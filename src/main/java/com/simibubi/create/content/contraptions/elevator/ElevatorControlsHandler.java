@@ -64,8 +64,8 @@ public class ElevatorControlsHandler {
 		AABB aabb = new AABB(origin, target).inflate(16);
 
 		Collection<WeakReference<AbstractContraptionEntity>> contraptions =
-			ContraptionHandler.loadedContraptions.get(mc.level)
-				.values();
+				ContraptionHandler.loadedContraptions.get(mc.level)
+						.values();
 
 		for (WeakReference<AbstractContraptionEntity> ref : contraptions) {
 			AbstractContraptionEntity contraptionEntity = ref.get();
@@ -73,21 +73,24 @@ public class ElevatorControlsHandler {
 				continue;
 
 			Contraption contraption = contraptionEntity.getContraption();
-			if (!(contraption instanceof ElevatorContraption ec))
+			if (!(contraption instanceof ElevatorContraption)) {
 				continue;
+			}
+
+			ElevatorContraption ec = (ElevatorContraption) contraption;
 
 			if (!contraptionEntity.getBoundingBox()
-				.intersects(aabb))
+					.intersects(aabb))
 				continue;
 
 			BlockHitResult rayTraceResult =
-				ContraptionHandlerClient.rayTraceContraption(origin, target, contraptionEntity);
+					ContraptionHandlerClient.rayTraceContraption(origin, target, contraptionEntity);
 			if (rayTraceResult == null)
 				continue;
 
 			BlockPos pos = rayTraceResult.getBlockPos();
 			StructureBlockInfo info = contraption.getBlocks()
-				.get(pos);
+					.get(pos);
 
 			if (info == null)
 				continue;
@@ -95,7 +98,7 @@ public class ElevatorControlsHandler {
 				continue;
 
 			if (!slot.testHit(info.state(), rayTraceResult.getLocation()
-				.subtract(Vec3.atLowerCornerOf(pos))))
+					.subtract(Vec3.atLowerCornerOf(pos))))
 				continue;
 
 			MovementContext ctx = null;
@@ -106,8 +109,9 @@ public class ElevatorControlsHandler {
 				}
 			}
 
-			if (!(ctx.temporaryData instanceof ElevatorFloorSelection))
+			if (ctx == null || !(ctx.temporaryData instanceof ElevatorFloorSelection)) {
 				ctx.temporaryData = new ElevatorFloorSelection();
+			}
 
 			ElevatorFloorSelection efs = (ElevatorFloorSelection) ctx.temporaryData;
 			int prev = efs.currentIndex;
@@ -118,7 +122,7 @@ public class ElevatorControlsHandler {
 				float pitch = (efs.currentIndex) / (float) (ec.namesList.size());
 				pitch = Mth.lerp(pitch, 1f, 1.5f);
 				AllSoundEvents.SCROLL_VALUE.play(mc.player.level(), mc.player,
-					BlockPos.containing(contraptionEntity.toGlobalVector(rayTraceResult.getLocation(), 1)), 1, pitch);
+						BlockPos.containing(contraptionEntity.toGlobalVector(rayTraceResult.getLocation(), 1)), 1, pitch);
 			}
 
 			return true;

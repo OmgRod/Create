@@ -89,15 +89,15 @@ public class ContraptionHandlerClient {
 		AABB aabb = new AABB(origin, target).inflate(16);
 
 		Collection<WeakReference<AbstractContraptionEntity>> contraptions =
-			ContraptionHandler.loadedContraptions.get(mc.level)
-				.values();
-		
+				ContraptionHandler.loadedContraptions.get(mc.level)
+						.values();
+
 		for (WeakReference<AbstractContraptionEntity> ref : contraptions) {
 			AbstractContraptionEntity contraptionEntity = ref.get();
 			if (contraptionEntity == null)
 				continue;
 			if (!contraptionEntity.getBoundingBox()
-				.intersects(aabb))
+					.intersects(aabb))
 				continue;
 
 			BlockHitResult rayTraceResult = rayTraceContraption(origin, target, contraptionEntity);
@@ -120,10 +120,13 @@ public class ContraptionHandlerClient {
 	}
 
 	private static boolean handleSpecialInteractions(AbstractContraptionEntity contraptionEntity, Player player,
-		BlockPos localPos, Direction side, InteractionHand interactionHand) {
-		if (AllItems.WRENCH.isIn(player.getItemInHand(interactionHand))
-			&& contraptionEntity instanceof CarriageContraptionEntity car)
-			return TrainRelocator.carriageWrenched(car.toGlobalVector(VecHelper.getCenterOf(localPos), 1), car);
+													 BlockPos localPos, Direction side, InteractionHand interactionHand) {
+		if (AllItems.WRENCH.isIn(player.getItemInHand(interactionHand))) {
+			if (contraptionEntity instanceof CarriageContraptionEntity) {
+				CarriageContraptionEntity car = (CarriageContraptionEntity) contraptionEntity;
+				return TrainRelocator.carriageWrenched(car.toGlobalVector(VecHelper.getCenterOf(localPos), 1), car);
+			}
+		}
 		return false;
 	}
 
@@ -134,14 +137,14 @@ public class ContraptionHandlerClient {
 		double reach = mc.gameMode.getPickRange();
 		if (mc.hitResult != null && mc.hitResult.getLocation() != null)
 			reach = Math.min(mc.hitResult.getLocation()
-				.distanceTo(origin), reach);
+					.distanceTo(origin), reach);
 		Vec3 target = RaycastHelper.getTraceTarget(player, reach, origin);
 		return Couple.create(origin, target);
 	}
 
 	@Nullable
 	public static BlockHitResult rayTraceContraption(Vec3 origin, Vec3 target,
-		AbstractContraptionEntity contraptionEntity) {
+													 AbstractContraptionEntity contraptionEntity) {
 		Vec3 localOrigin = contraptionEntity.toLocalVector(origin, 1);
 		Vec3 localTarget = contraptionEntity.toLocalVector(target, 1);
 		Contraption contraption = contraptionEntity.getContraption();
@@ -153,7 +156,7 @@ public class ContraptionHandlerClient {
 					continue;
 				BlockPos pos = d == Direction.DOWN ? p : p.relative(d);
 				StructureBlockInfo blockInfo = contraption.getBlocks()
-					.get(pos);
+						.get(pos);
 				if (blockInfo == null)
 					continue;
 				BlockState state = blockInfo.state();
@@ -177,5 +180,4 @@ public class ContraptionHandlerClient {
 		BlockHitResult rayTraceResult = mutableResult.getValue();
 		return rayTraceResult;
 	}
-
 }

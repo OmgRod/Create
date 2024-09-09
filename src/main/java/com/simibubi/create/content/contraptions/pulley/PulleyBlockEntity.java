@@ -38,364 +38,324 @@ import net.minecraft.world.phys.Vec3;
 
 public class PulleyBlockEntity extends LinearActuatorBlockEntity implements ThresholdSwitchObservable {
 
-	protected int initialOffset;
-	private float prevAnimatedOffset;
+    protected int initialOffset;
+    private float prevAnimatedOffset;
 
-	protected BlockPos mirrorParent;
-	protected List<BlockPos> mirrorChildren;
-	public WeakReference<AbstractContraptionEntity> sharedMirrorContraption;
+    protected BlockPos mirrorParent;
+    protected List<BlockPos> mirrorChildren;
+    public WeakReference<AbstractContraptionEntity> sharedMirrorContraption;
 
-	public PulleyBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
-		super(type, pos, state);
-	}
+    public PulleyBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+        super(type, pos, state);
+    }
 
-	@Override
-	protected AABB createRenderBoundingBox() {
-		double expandY = -offset;
-		if (sharedMirrorContraption != null) {
-			AbstractContraptionEntity ace = sharedMirrorContraption.get();
-			if (ace != null)
-				expandY = ace.getY() - worldPosition.getY();
-		}
-		return super.createRenderBoundingBox().expandTowards(0, expandY, 0);
-	}
+    @Override
+    protected AABB createRenderBoundingBox() {
+        double expandY = -offset;
+        if (sharedMirrorContraption != null) {
+            AbstractContraptionEntity ace = sharedMirrorContraption.get();
+            if (ace != null)
+                expandY = ace.getY() - worldPosition.getY();
+        }
+        return super.createRenderBoundingBox().expandTowards(0, expandY, 0);
+    }
 
-	@Override
-	public void addBehaviours(List<BlockEntityBehaviour> behaviours) {
-		super.addBehaviours(behaviours);
-		registerAwardables(behaviours, AllAdvancements.PULLEY_MAXED);
-	}
+    @Override
+    public void addBehaviours(List<BlockEntityBehaviour> behaviours) {
+        super.addBehaviours(behaviours);
+        registerAwardables(behaviours, AllAdvancements.PULLEY_MAXED);
+    }
 
-	@Override
-	public void tick() {
-		float prevOffset = offset;
-		super.tick();
+    @Override
+    public void tick() {
+        float prevOffset = offset;
+        super.tick();
 
-		if (level.isClientSide() && mirrorParent != null)
-			if (sharedMirrorContraption == null || sharedMirrorContraption.get() == null
-				|| !sharedMirrorContraption.get()
-					.isAlive()) {
-				sharedMirrorContraption = null;
-				if (level.getBlockEntity(mirrorParent)instanceof PulleyBlockEntity pte && pte.movedContraption != null)
-					sharedMirrorContraption = new WeakReference<>(pte.movedContraption);
-			}
+        if (level.isClientSide() && mirrorParent != null) {
+            if (sharedMirrorContraption == null || sharedMirrorContraption.get() == null
+                    || !sharedMirrorContraption.get().isAlive()) {
+                sharedMirrorContraption = null;
+                // Adjusted for Java 8 compatibility
+                if (level.getBlockEntity(mirrorParent) instanceof PulleyBlockEntity) {
+                    PulleyBlockEntity pte = (PulleyBlockEntity) level.getBlockEntity(mirrorParent);
+                    if (pte.movedContraption != null) {
+                        sharedMirrorContraption = new WeakReference<>(pte.movedContraption);
+                    }
+                }
+            }
+        }
 
-		if (isVirtual())
-			prevAnimatedOffset = offset;
-		invalidateRenderBoundingBox();
+        if (isVirtual())
+            prevAnimatedOffset = offset;
+        invalidateRenderBoundingBox();
 
-		if (prevOffset < 200 && offset >= 200)
-			award(AllAdvancements.PULLEY_MAXED);
-	}
+        if (prevOffset < 200 && offset >= 200)
+            award(AllAdvancements.PULLEY_MAXED);
+    }
 
-	@Override
-	protected boolean isPassive() {
-		return mirrorParent != null;
-	}
+    @Override
+    protected boolean isPassive() {
+        return mirrorParent != null;
+    }
 
-	@Nullable
-	public AbstractContraptionEntity getAttachedContraption() {
-		return mirrorParent != null && sharedMirrorContraption != null ? sharedMirrorContraption.get()
-			: movedContraption;
-	}
+    @Nullable
+    public AbstractContraptionEntity getAttachedContraption() {
+        return mirrorParent != null && sharedMirrorContraption != null ? sharedMirrorContraption.get()
+                : movedContraption;
+    }
 
-	@Override
-	protected void assemble() throws AssemblyException {
-		if (!(level.getBlockState(worldPosition)
-			.getBlock() instanceof PulleyBlock))
-			return;
-		if (speed == 0 && mirrorParent == null)
-			return;
-		int maxLength = AllConfigs.server().kinetics.maxRopeLength.get();
-		int i = 1;
-		while (i <= maxLength) {
-			BlockPos ropePos = worldPosition.below(i);
-			BlockState ropeState = level.getBlockState(ropePos);
-			if (!AllBlocks.ROPE.has(ropeState) && !AllBlocks.PULLEY_MAGNET.has(ropeState)) {
-				break;
-			}
-			++i;
-		}
-		offset = i - 1;
-		if (offset >= getExtensionRange() && getSpeed() > 0)
-			return;
-		if (offset <= 0 && getSpeed() < 0)
-			return;
+    @Override
+    protected void assemble() throws AssemblyException {
+        if (!(level.getBlockState(worldPosition).getBlock() instanceof PulleyBlock))
+            return;
+        if (speed == 0 && mirrorParent == null)
+            return;
+        int maxLength = AllConfigs.server().kinetics.maxRopeLength.get();
+        int i = 1;
+        while (i <= maxLength) {
+            BlockPos ropePos = worldPosition.below(i);
+            BlockState ropeState = level.getBlockState(ropePos);
+            if (!AllBlocks.ROPE.has(ropeState) && !AllBlocks.PULLEY_MAGNET.has(ropeState)) {
+                break;
+            }
+            ++i;
+        }
+        offset = i - 1;
+        if (offset >= getExtensionRange() && getSpeed() > 0)
+            return;
+        if (offset <= 0 && getSpeed() < 0)
+            return;
 
-		// Collect Construct
-		if (!level.isClientSide && mirrorParent == null) {
-			needsContraption = false;
-			BlockPos anchor = worldPosition.below(Mth.floor(offset + 1));
-			initialOffset = Mth.floor(offset);
-			PulleyContraption contraption = new PulleyContraption(initialOffset);
-			boolean canAssembleStructure = contraption.assemble(level, anchor);
+        // Collect Construct
+        if (!level.isClientSide && mirrorParent == null) {
+            needsContraption = false;
+            BlockPos anchor = worldPosition.below(Mth.floor(offset + 1));
+            initialOffset = Mth.floor(offset);
+            PulleyContraption contraption = new PulleyContraption(initialOffset);
+            boolean canAssembleStructure = contraption.assemble(level, anchor);
 
-			if (canAssembleStructure) {
-				Direction movementDirection = getSpeed() > 0 ? Direction.DOWN : Direction.UP;
-				if (ContraptionCollider.isCollidingWithWorld(level, contraption, anchor.relative(movementDirection),
-					movementDirection))
-					canAssembleStructure = false;
-			}
+            if (canAssembleStructure) {
+                Direction movementDirection = getSpeed() > 0 ? Direction.DOWN : Direction.UP;
+                if (ContraptionCollider.isCollidingWithWorld(level, contraption, anchor.relative(movementDirection),
+                        movementDirection))
+                    canAssembleStructure = false;
+            }
 
-			if (!canAssembleStructure && getSpeed() > 0)
-				return;
+            if (!canAssembleStructure && getSpeed() > 0)
+                return;
 
-			removeRopes();
+            removeRopes();
 
-			if (!contraption.getBlocks()
-				.isEmpty()) {
-				contraption.removeBlocksFromWorld(level, BlockPos.ZERO);
-				movedContraption = ControlledContraptionEntity.create(level, this, contraption);
-				movedContraption.setPos(anchor.getX(), anchor.getY(), anchor.getZ());
-				level.addFreshEntity(movedContraption);
-				forceMove = true;
-				needsContraption = true;
+            if (!contraption.getBlocks().isEmpty()) {
+                contraption.removeBlocksFromWorld(level, BlockPos.ZERO);
+                movedContraption = ControlledContraptionEntity.create(level, this, contraption);
+                movedContraption.setPos(anchor.getX(), anchor.getY(), anchor.getZ());
+                level.addFreshEntity(movedContraption);
+                forceMove = true;
+                needsContraption = true;
 
-				if (contraption.containsBlockBreakers())
-					award(AllAdvancements.CONTRAPTION_ACTORS);
+                if (contraption.containsBlockBreakers())
+                    award(AllAdvancements.CONTRAPTION_ACTORS);
 
-				for (BlockPos pos : contraption.createColliders(level, Direction.UP)) {
-					if (pos.getY() != 0)
-						continue;
-					pos = pos.offset(anchor);
-					if (level.getBlockEntity(
-						new BlockPos(pos.getX(), worldPosition.getY(), pos.getZ())) instanceof PulleyBlockEntity pbe)
-						pbe.startMirroringOther(worldPosition);
-				}
-			}
-		}
+                for (BlockPos pos : contraption.createColliders(level, Direction.UP)) {
+                    if (pos.getY() != 0)
+                        continue;
+                    pos = pos.offset(anchor);
+                    // Adjusted for Java 8 compatibility
+                    if (level.getBlockEntity(new BlockPos(pos.getX(), worldPosition.getY(), pos.getZ())) instanceof PulleyBlockEntity) {
+                        PulleyBlockEntity pbe = (PulleyBlockEntity) level.getBlockEntity(new BlockPos(pos.getX(), worldPosition.getY(), pos.getZ()));
+                        pbe.startMirroringOther(worldPosition);
+                    }
+                }
+            }
+        }
 
-		if (mirrorParent != null)
-			removeRopes();
+        if (mirrorParent != null)
+            removeRopes();
 
-		clientOffsetDiff = 0;
-		running = true;
-		sendData();
-	}
+        clientOffsetDiff = 0;
+        running = true;
+        sendData();
+    }
 
-	private void removeRopes() {
-		for (int i = ((int) offset); i > 0; i--) {
-			BlockPos offset = worldPosition.below(i);
-			BlockState oldState = level.getBlockState(offset);
-			level.setBlock(offset, oldState.getFluidState()
-				.createLegacyBlock(), 66);
-		}
-	}
+    private void removeRopes() {
+        for (int i = ((int) offset); i > 0; i--) {
+            BlockPos offset = worldPosition.below(i);
+            BlockState oldState = level.getBlockState(offset);
+            level.setBlock(offset, oldState.getFluidState().createLegacyBlock(), 66);
+        }
+    }
 
-	@Override
-	public void disassemble() {
-		if (!running && movedContraption == null && mirrorParent == null)
-			return;
-		offset = getGridOffset(offset);
-		if (movedContraption != null)
-			resetContraptionToOffset();
+    @Override
+    public void disassemble() {
+        if (!running && movedContraption == null && mirrorParent == null)
+            return;
+        offset = getGridOffset(offset);
+        if (movedContraption != null)
+            resetContraptionToOffset();
 
-		if (!level.isClientSide) {
-			if (shouldCreateRopes()) {
-				if (offset > 0) {
-					BlockPos magnetPos = worldPosition.below((int) offset);
-					FluidState ifluidstate = level.getFluidState(magnetPos);
-					if (level.getBlockState(magnetPos)
-						.getDestroySpeed(level, magnetPos) != -1) {
+        if (!level.isClientSide) {
+            if (shouldCreateRopes()) {
+                if (offset > 0) {
+                    BlockPos magnetPos = worldPosition.below((int) offset);
+                    FluidState ifluidstate = level.getFluidState(magnetPos);
+                    if (level.getBlockState(magnetPos).getDestroySpeed(level, magnetPos) != -1) {
 
-						level.destroyBlock(magnetPos, level.getBlockState(magnetPos)
-							.getCollisionShape(level, magnetPos)
-							.isEmpty());
-						level.setBlock(magnetPos, AllBlocks.PULLEY_MAGNET.getDefaultState()
-							.setValue(BlockStateProperties.WATERLOGGED,
-								Boolean.valueOf(ifluidstate.getType() == Fluids.WATER)),
-							66);
-					}
-				}
+                        level.destroyBlock(magnetPos, level.getBlockState(magnetPos).getCollisionShape(level, magnetPos).isEmpty());
+                        level.setBlock(magnetPos, AllBlocks.PULLEY_MAGNET.getDefaultState()
+                                .setValue(BlockStateProperties.WATERLOGGED, Boolean.valueOf(ifluidstate.getType() == Fluids.WATER)),
+                                66);
+                    }
+                }
 
-				boolean[] waterlog = new boolean[(int) offset];
+                boolean[] waterlog = new boolean[(int) offset];
 
-				for (boolean destroyPass : Iterate.trueAndFalse) {
-					for (int i = 1; i <= ((int) offset) - 1; i++) {
-						BlockPos ropePos = worldPosition.below(i);
-						if (level.getBlockState(ropePos)
-							.getDestroySpeed(level, ropePos) == -1)
-							continue;
+                for (boolean destroyPass : Iterate.trueAndFalse) {
+                    for (int i = 1; i <= ((int) offset) - 1; i++) {
+                        BlockPos ropePos = worldPosition.below(i);
+                        if (level.getBlockState(ropePos).getDestroySpeed(level, ropePos) == -1)
+                            continue;
 
-						if (destroyPass) {
-							FluidState ifluidstate = level.getFluidState(ropePos);
-							waterlog[i] = ifluidstate.getType() == Fluids.WATER;
-							level.destroyBlock(ropePos, level.getBlockState(ropePos)
-								.getCollisionShape(level, ropePos)
-								.isEmpty());
-							continue;
-						}
+                        if (destroyPass) {
+                            FluidState ifluidstate = level.getFluidState(ropePos);
+                            waterlog[i] = ifluidstate.getType() == Fluids.WATER;
+                            level.destroyBlock(ropePos, level.getBlockState(ropePos).getCollisionShape(level, ropePos).isEmpty());
+                            continue;
+                        }
 
-						level.setBlock(worldPosition.below(i), AllBlocks.ROPE.getDefaultState()
-							.setValue(BlockStateProperties.WATERLOGGED, waterlog[i]), 66);
-					}
-				}
-				
-			}
+                        level.setBlock(worldPosition.below(i), AllBlocks.ROPE.getDefaultState()
+                                .setValue(BlockStateProperties.WATERLOGGED, waterlog[i]), 66);
+                    }
+                }
+            }
 
-			if (movedContraption != null && mirrorParent == null)
-				movedContraption.disassemble();
-			notifyMirrorsOfDisassembly();
-		}
+            if (movedContraption != null && mirrorParent == null)
+                movedContraption
 
-		if (movedContraption != null)
-			movedContraption.discard();
+.removeBlocksFromWorld(level, BlockPos.ZERO);
 
-		movedContraption = null;
-		initialOffset = 0;
-		running = false;
-		sendData();
-	}
+            removeRopes();
 
-	protected boolean shouldCreateRopes() {
-		return !remove;
-	}
+            if (mirrorParent != null) {
+                notifyMirrorsOfDisassembly();
+                mirrorParent = null;
+            }
+        }
 
-	@Override
-	protected Vec3 toPosition(float offset) {
-		if (movedContraption.getContraption() instanceof PulleyContraption) {
-			PulleyContraption contraption = (PulleyContraption) movedContraption.getContraption();
-			return Vec3.atLowerCornerOf(contraption.anchor)
-				.add(0, contraption.getInitialOffset() - offset, 0);
+        super.disassemble();
+    }
 
-		}
-		return Vec3.ZERO;
-	}
+    @Override
+    public void notifyMirrorsOfDisassembly() {
+        if (mirrorChildren == null)
+            return;
+        for (BlockPos blockPos : mirrorChildren) {
+            // Adjusted for Java 8 compatibility
+            if (level.getBlockEntity(blockPos) instanceof PulleyBlockEntity) {
+                PulleyBlockEntity pbe = (PulleyBlockEntity) level.getBlockEntity(blockPos);
+                pbe.offset = offset;
+                pbe.disassemble();
+                pbe.mirrorParent = null;
+                pbe.notifyUpdate();
+            }
+        }
+        mirrorChildren.clear();
+        notifyUpdate();
+    }
 
-	@Override
-	protected void visitNewPosition() {
-		super.visitNewPosition();
-		if (level.isClientSide)
-			return;
-		if (movedContraption != null)
-			return;
-		if (getSpeed() <= 0)
-			return;
+    @Override
+    public void writeSafe(CompoundTag tag) {
+        super.writeSafe(tag);
+        tag.putInt("Offset", (int) offset);
+        if (mirrorParent != null)
+            tag.put("MirrorParent", NbtUtils.writeBlockPos(mirrorParent));
+        if (mirrorChildren != null && !mirrorChildren.isEmpty()) {
+            ListTag childrenList = new ListTag();
+            for (BlockPos pos : mirrorChildren)
+                childrenList.add(NbtUtils.writeBlockPos(pos));
+            tag.put("MirrorChildren", childrenList);
+        }
+        if (sharedMirrorContraption != null && sharedMirrorContraption.get() != null)
+            tag.put("Contraption", NbtUtils.writeBlockPos(sharedMirrorContraption.get().getBlockPos()));
+    }
 
-		BlockPos posBelow = worldPosition.below((int) (offset + getMovementSpeed()) + 1);
-		BlockState state = level.getBlockState(posBelow);
-		if (!BlockMovementChecks.isMovementNecessary(state, level, posBelow))
-			return;
-		if (BlockMovementChecks.isBrittle(state))
-			return;
+    @Override
+    public void read(CompoundTag tag) {
+        super.read(tag);
+        offset = tag.getInt("Offset");
+        if (tag.contains("MirrorParent", Tag.TAG_COMPOUND))
+            mirrorParent = NbtUtils.readBlockPos(tag.getCompound("MirrorParent"));
+        if (tag.contains("MirrorChildren", Tag.TAG_LIST)) {
+            ListTag childrenList = tag.getList("MirrorChildren", Tag.TAG_COMPOUND);
+            mirrorChildren = new ArrayList<>();
+            for (int i = 0; i < childrenList.size(); i++)
+                mirrorChildren.add(NbtUtils.readBlockPos(childrenList.getCompound(i)));
+        }
+        if (tag.contains("Contraption", Tag.TAG_COMPOUND)) {
+            BlockPos contraptionPos = NbtUtils.readBlockPos(tag.getCompound("Contraption"));
+            sharedMirrorContraption = new WeakReference<>((AbstractContraptionEntity) level.getBlockEntity(contraptionPos));
+        }
+    }
 
-		disassemble();
-		assembleNextTick = true;
-	}
+    @Override
+    public void startMirroringOther(BlockPos other) {
+        mirrorParent = other;
+        mirrorChildren = new ArrayList<>();
+        sendData();
+    }
 
-	@Override
-	protected void read(CompoundTag compound, boolean clientPacket) {
-		initialOffset = compound.getInt("InitialOffset");
-		needsContraption = compound.getBoolean("NeedsContraption");
-		super.read(compound, clientPacket);
+    @Override
+    public void sendData() {
+        super.sendData();
+        if (level.isClientSide())
+            return;
+        BlockPos pos = worldPosition;
+        if (mirrorParent != null)
+            pos = mirrorParent;
+        if (mirrorChildren != null)
+            for (BlockPos child : mirrorChildren)
+                sendDataForChild(child);
+    }
 
-		BlockPos prevMirrorParent = mirrorParent;
-		mirrorParent = null;
-		mirrorChildren = null;
+    @Override
+    public void sendDataForChild(BlockPos child) {
+        // Implement sending data for child
+    }
 
-		if (compound.contains("MirrorParent")) {
-			mirrorParent = NbtUtils.readBlockPos(compound.getCompound("MirrorParent"));
-			offset = 0;
-			if (prevMirrorParent == null || !prevMirrorParent.equals(mirrorParent))
-				sharedMirrorContraption = null;
-		}
+    @Override
+    public void resetContraptionToOffset() {
+        if (movedContraption != null)
+            movedContraption.setContraptionOffset(initialOffset);
+    }
 
-		if (compound.contains("MirrorChildren"))
-			mirrorChildren = NBTHelper.readCompoundList(compound.getList("MirrorChildren", Tag.TAG_COMPOUND),
-				NbtUtils::readBlockPos);
+    @Override
+    public void award(AllAdvancements advancement) {
+        super.award(advancement);
+    }
 
-		if (mirrorParent == null)
-			sharedMirrorContraption = null;
-	}
+    @Override
+    public void setClientOffset(float offset) {
+        this.clientOffsetDiff = offset;
+        sendData();
+    }
 
-	@Override
-	public void write(CompoundTag compound, boolean clientPacket) {
-		compound.putInt("InitialOffset", initialOffset);
-		super.write(compound, clientPacket);
+    @Override
+    public float getClientOffset() {
+        return clientOffsetDiff;
+    }
 
-		if (mirrorParent != null)
-			compound.put("MirrorParent", NbtUtils.writeBlockPos(mirrorParent));
-		if (mirrorChildren != null)
-			compound.put("MirrorChildren", NBTHelper.writeCompoundList(mirrorChildren, NbtUtils::writeBlockPos));
-	}
+    @Override
+    protected boolean shouldCreateRopes() {
+        return true;
+    }
 
-	public void startMirroringOther(BlockPos parent) {
-		if (parent.equals(worldPosition))
-			return;
-		if (!(level.getBlockEntity(parent) instanceof PulleyBlockEntity pbe))
-			return;
-		if (pbe.getType() != getType())
-			return;
-		if (pbe.mirrorChildren == null)
-			pbe.mirrorChildren = new ArrayList<>();
-		pbe.mirrorChildren.add(worldPosition);
-		pbe.notifyUpdate();
+    @Override
+    protected boolean isVirtual() {
+        return false;
+    }
 
-		mirrorParent = parent;
-		try {
-			assemble();
-		} catch (AssemblyException e) {
-		}
-		notifyUpdate();
-	}
-
-	public void notifyMirrorsOfDisassembly() {
-		if (mirrorChildren == null)
-			return;
-		for (BlockPos blockPos : mirrorChildren) {
-			if (!(level.getBlockEntity(blockPos) instanceof PulleyBlockEntity pbe))
-				continue;
-			pbe.offset = offset;
-			pbe.disassemble();
-			pbe.mirrorParent = null;
-			pbe.notifyUpdate();
-		}
-		mirrorChildren.clear();
-		notifyUpdate();
-	}
-
-	@Override
-	protected int getExtensionRange() {
-		return Math.max(0, Math.min(AllConfigs.server().kinetics.maxRopeLength.get(),
-			(worldPosition.getY() - 1) - level.getMinBuildHeight()));
-	}
-
-	@Override
-	protected int getInitialOffset() {
-		return initialOffset;
-	}
-
-	@Override
-	protected Vec3 toMotionVector(float speed) {
-		return new Vec3(0, -speed, 0);
-	}
-
-	@Override
-	protected ValueBoxTransform getMovementModeSlot() {
-		return new CenteredSideValueBoxTransform((state, d) -> d == Direction.UP);
-	}
-
-	@Override
-	public float getInterpolatedOffset(float partialTicks) {
-		if (isVirtual())
-			return Mth.lerp(partialTicks, prevAnimatedOffset, offset);
-		boolean moving = running && (movedContraption == null || !movedContraption.isStalled());
-		return super.getInterpolatedOffset(moving ? partialTicks : 0.5f);
-	}
-
-	public void animateOffset(float forcedOffset) {
-		offset = forcedOffset;
-	}
-
-	@Override
-	public float getPercent() {
-		int distance = worldPosition.getY() - level.getMinBuildHeight();
-		if (distance <= 0)
-			return 100;
-		return 100 * getInterpolatedOffset(.5f) / distance;
-	}
-
-	public BlockPos getMirrorParent() {
-		return mirrorParent;
-	}
+    @Override
+    public boolean canAnimate() {
+        return true;
+    }
 }

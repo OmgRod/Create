@@ -35,8 +35,8 @@ public class PortableStorageInterfaceMovement implements MovementBehaviour {
 	@Override
 	public Vec3 getActiveAreaOffset(MovementContext context) {
 		return Vec3.atLowerCornerOf(context.state.getValue(PortableStorageInterfaceBlock.FACING)
-			.getNormal())
-			.scale(1.85f);
+						.getNormal())
+				.scale(1.85f);
 	}
 
 	@Override
@@ -47,14 +47,14 @@ public class PortableStorageInterfaceMovement implements MovementBehaviour {
 	@Nullable
 	@Override
 	public ActorVisual createVisual(VisualizationContext visualizationContext, VirtualRenderWorld simulationWorld,
-		MovementContext movementContext) {
+									MovementContext movementContext) {
 		return new PSIActorVisual(visualizationContext, simulationWorld, movementContext);
 	}
 
 	@Override
 	@OnlyIn(Dist.CLIENT)
 	public void renderInContraption(MovementContext context, VirtualRenderWorld renderWorld,
-		ContraptionMatrices matrices, MultiBufferSource buffer) {
+									ContraptionMatrices matrices, MultiBufferSource buffer) {
 		if (!VisualizationManager.supportsVisualization(context.world))
 			PortableStorageInterfaceRenderer.renderInContraption(context, renderWorld, matrices, buffer);
 	}
@@ -91,7 +91,7 @@ public class PortableStorageInterfaceMovement implements MovementBehaviour {
 		Vec3 target = VecHelper.getCenterOf(pos);
 
 		if (!context.stall && !onCarriage
-			&& context.position.closerThan(target, target.distanceTo(context.position.add(context.motion))))
+				&& context.position.closerThan(target, target.distanceTo(context.position.add(context.motion))))
 			context.stall = true;
 
 		Optional<Direction> currentFacingIfValid = getCurrentFacingIfValid(context);
@@ -99,7 +99,7 @@ public class PortableStorageInterfaceMovement implements MovementBehaviour {
 			return;
 
 		PortableStorageInterfaceBlockEntity stationaryInterface =
-			getStationaryInterfaceAt(context.world, pos, context.state, currentFacingIfValid.get());
+				getStationaryInterfaceAt(context.world, pos, context.state, currentFacingIfValid.get());
 		if (stationaryInterface == null) {
 			reset(context);
 			return;
@@ -116,15 +116,18 @@ public class PortableStorageInterfaceMovement implements MovementBehaviour {
 	}
 
 	protected boolean findInterface(MovementContext context, BlockPos pos) {
-		if (context.contraption instanceof CarriageContraption cc && !cc.notInPortal())
-			return false;
+		if (context.contraption instanceof CarriageContraption) {
+			CarriageContraption cc = (CarriageContraption) context.contraption;
+			if (!cc.notInPortal())
+				return false;
+		}
 		Optional<Direction> currentFacingIfValid = getCurrentFacingIfValid(context);
 		if (!currentFacingIfValid.isPresent())
 			return false;
 
 		Direction currentFacing = currentFacingIfValid.get();
 		PortableStorageInterfaceBlockEntity psi =
-			findStationaryInterface(context.world, pos, context.state, currentFacing);
+				findStationaryInterface(context.world, pos, context.state, currentFacing);
 
 		if (psi == null)
 			return false;
@@ -134,14 +137,14 @@ public class PortableStorageInterfaceMovement implements MovementBehaviour {
 		context.data.put(_workingPos_, NbtUtils.writeBlockPos(psi.getBlockPos()));
 		if (!context.world.isClientSide) {
 			Vec3 diff = VecHelper.getCenterOf(psi.getBlockPos())
-				.subtract(context.position);
+					.subtract(context.position);
 			diff = VecHelper.project(diff, Vec3.atLowerCornerOf(currentFacing.getNormal()));
 			float distance = (float) (diff.length() + 1.85f - 1);
 			psi.startTransferringTo(context.contraption, distance);
 		} else {
 			context.data.put(_clientPrevPos_, NbtUtils.writeBlockPos(pos));
 			if (context.contraption instanceof CarriageContraption || context.contraption.entity.isStalled()
-				|| context.motion.lengthSqr() == 0)
+					|| context.motion.lengthSqr() == 0)
 				getAnimation(context).chase(psi.getConnectionDistance() / 2, 0.25f, Chaser.LINEAR);
 		}
 
@@ -150,7 +153,7 @@ public class PortableStorageInterfaceMovement implements MovementBehaviour {
 
 	@Override
 	public void stopMoving(MovementContext context) {
-//		reset(context);
+//        reset(context);
 	}
 
 	@Override
@@ -166,10 +169,10 @@ public class PortableStorageInterfaceMovement implements MovementBehaviour {
 	}
 
 	private PortableStorageInterfaceBlockEntity findStationaryInterface(Level world, BlockPos pos, BlockState state,
-		Direction facing) {
+																		Direction facing) {
 		for (int i = 0; i < 2; i++) {
 			PortableStorageInterfaceBlockEntity interfaceAt =
-				getStationaryInterfaceAt(world, pos.relative(facing, i), state, facing);
+					getStationaryInterfaceAt(world, pos.relative(facing, i), state, facing);
 			if (interfaceAt == null)
 				continue;
 			return interfaceAt;
@@ -178,10 +181,12 @@ public class PortableStorageInterfaceMovement implements MovementBehaviour {
 	}
 
 	private PortableStorageInterfaceBlockEntity getStationaryInterfaceAt(Level world, BlockPos pos, BlockState state,
-		Direction facing) {
+																		 Direction facing) {
 		BlockEntity blockEntity = world.getBlockEntity(pos);
-		if (!(blockEntity instanceof PortableStorageInterfaceBlockEntity psi))
+		if (!(blockEntity instanceof PortableStorageInterfaceBlockEntity)) {
 			return null;
+		}
+		PortableStorageInterfaceBlockEntity psi = (PortableStorageInterfaceBlockEntity) blockEntity;
 		BlockState blockState = world.getBlockState(pos);
 		if (blockState.getBlock() != state.getBlock())
 			return null;
@@ -194,7 +199,7 @@ public class PortableStorageInterfaceMovement implements MovementBehaviour {
 
 	private Optional<Direction> getCurrentFacingIfValid(MovementContext context) {
 		Vec3 directionVec = Vec3.atLowerCornerOf(context.state.getValue(PortableStorageInterfaceBlock.FACING)
-			.getNormal());
+				.getNormal());
 		directionVec = context.rotation.apply(directionVec);
 		Direction facingFromVector = Direction.getNearest(directionVec.x, directionVec.y, directionVec.z);
 		if (directionVec.distanceTo(Vec3.atLowerCornerOf(facingFromVector.getNormal())) > 1 / 2f)
@@ -203,11 +208,12 @@ public class PortableStorageInterfaceMovement implements MovementBehaviour {
 	}
 
 	public static LerpedFloat getAnimation(MovementContext context) {
-		if (!(context.temporaryData instanceof LerpedFloat lf)) {
+		if (!(context.temporaryData instanceof LerpedFloat)) {
 			LerpedFloat nlf = LerpedFloat.linear();
 			context.temporaryData = nlf;
 			return nlf;
 		}
+		LerpedFloat lf = (LerpedFloat) context.temporaryData;
 		return lf;
 	}
 

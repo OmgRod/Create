@@ -48,7 +48,7 @@ public class RollerBlockEntity extends SmartBlockEntity {
 	public void addBehaviours(List<BlockEntityBehaviour> behaviours) {
 		behaviours.add(filtering = new FilteringBehaviour(this, new RollerValueBox(3)));
 		behaviours.add(mode = new ScrollOptionBehaviour<RollingMode>(RollingMode.class,
-			Lang.translateDirect("contraptions.roller_mode"), this, new RollerValueBox(-3)));
+				Lang.translateDirect("contraptions.roller_mode"), this, new RollerValueBox(-3)));
 
 		filtering.setLabel(Lang.translateDirect("contraptions.mechanical_roller.pave_material"));
 		filtering.withCallback(this::onFilterChanged);
@@ -75,9 +75,7 @@ public class RollerBlockEntity extends SmartBlockEntity {
 		if (appliedState.getBlock() instanceof StairBlock)
 			return false;
 		VoxelShape shape = appliedState.getShape(level, worldPosition);
-		if (shape.isEmpty() || !shape.bounds()
-			.equals(Shapes.block()
-				.bounds()))
+		if (shape.isEmpty() || !shape.bounds().equals(Shapes.block().bounds()))
 			return false;
 		VoxelShape collisionShape = appliedState.getCollisionShape(level, worldPosition);
 		if (collisionShape.isEmpty())
@@ -101,17 +99,19 @@ public class RollerBlockEntity extends SmartBlockEntity {
 	public void searchForSharedValues() {
 		BlockState blockState = getBlockState();
 		Direction facing = blockState.getOptionalValue(RollerBlock.FACING)
-			.orElse(Direction.SOUTH);
+				.orElse(Direction.SOUTH);
 
 		for (int side : Iterate.positiveAndNegative) {
 			BlockPos pos = worldPosition.relative(facing.getClockWise(), side);
 			if (level.getBlockState(pos) != blockState)
 				continue;
-			if (!(level.getBlockEntity(pos) instanceof RollerBlockEntity otherRoller))
-				continue;
-			acceptSharedValues(otherRoller.mode.getValue(), otherRoller.filtering.getFilter());
-			shareValuesToAdjacent();
-			break;
+			BlockEntity blockEntity = level.getBlockEntity(pos);
+			if (blockEntity instanceof RollerBlockEntity) {
+				RollerBlockEntity otherRoller = (RollerBlockEntity) blockEntity;
+				acceptSharedValues(otherRoller.mode.getValue(), otherRoller.filtering.getFilter());
+				shareValuesToAdjacent();
+				break;
+			}
 		}
 	}
 
@@ -128,16 +128,20 @@ public class RollerBlockEntity extends SmartBlockEntity {
 			return;
 		BlockState blockState = getBlockState();
 		Direction facing = blockState.getOptionalValue(RollerBlock.FACING)
-			.orElse(Direction.SOUTH);
+				.orElse(Direction.SOUTH);
 
 		for (int side : Iterate.positiveAndNegative) {
 			for (int i = 1; i < 100; i++) {
 				BlockPos pos = worldPosition.relative(facing.getClockWise(), side * i);
 				if (level.getBlockState(pos) != blockState)
 					break;
-				if (!(level.getBlockEntity(pos) instanceof RollerBlockEntity otherRoller))
+				BlockEntity blockEntity = level.getBlockEntity(pos);
+				if (blockEntity instanceof RollerBlockEntity) {
+					RollerBlockEntity otherRoller = (RollerBlockEntity) blockEntity;
+					otherRoller.acceptSharedValues(mode.getValue(), filtering.getFilter());
+				} else {
 					break;
-				otherRoller.acceptSharedValues(mode.getValue(), filtering.getFilter());
+				}
 			}
 		}
 	}
@@ -183,8 +187,8 @@ public class RollerBlockEntity extends SmartBlockEntity {
 			Direction facing = state.getValue(RollerBlock.FACING);
 			float yRot = AngleHelper.horizontalAngle(facing) + 180;
 			TransformStack.of(ms)
-				.rotateYDegrees(yRot)
-				.rotateXDegrees(90);
+					.rotateYDegrees(yRot)
+					.rotateXDegrees(90);
 		}
 
 		@Override

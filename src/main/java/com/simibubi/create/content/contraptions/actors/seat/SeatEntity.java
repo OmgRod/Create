@@ -19,7 +19,9 @@ import net.minecraft.world.entity.animal.Cat;
 import net.minecraft.world.entity.animal.Parrot;
 import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.entity.animal.frog.Frog;
-import net.minecraft.world.entity.monster.Creeper;
+import net.minecraft
+
+		.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Skeleton;
 import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.level.Level;
@@ -88,7 +90,7 @@ public class SeatEntity extends Entity implements IEntityAdditionalSpawnData {
 		if (level().isClientSide)
 			return;
 		boolean blockPresent = level().getBlockState(blockPosition())
-			.getBlock() instanceof SeatBlock;
+				.getBlock() instanceof SeatBlock;
 		if (isVehicle() && blockPresent)
 			return;
 		this.discard();
@@ -104,8 +106,10 @@ public class SeatEntity extends Entity implements IEntityAdditionalSpawnData {
 	@Override
 	protected void removePassenger(Entity entity) {
 		super.removePassenger(entity);
-		if (entity instanceof TamableAnimal ta)
+		if (entity instanceof TamableAnimal) {
+			TamableAnimal ta = (TamableAnimal) entity;
 			ta.setInSittingPose(false);
+		}
 	}
 
 	@Override
@@ -135,7 +139,7 @@ public class SeatEntity extends Entity implements IEntityAdditionalSpawnData {
 
 		@Override
 		public boolean shouldRender(SeatEntity p_225626_1_, Frustum p_225626_2_, double p_225626_3_, double p_225626_5_,
-			double p_225626_7_) {
+									double p_225626_7_) {
 			return false;
 		}
 

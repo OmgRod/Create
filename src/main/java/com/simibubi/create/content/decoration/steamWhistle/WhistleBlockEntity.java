@@ -185,12 +185,15 @@ public class WhistleBlockEntity extends SmartBlockEntity implements IHaveGoggleI
 				source = new WeakReference<>(null);
 			Direction facing = WhistleBlock.getAttachedDirection(getBlockState());
 			BlockEntity be = level.getBlockEntity(worldPosition.relative(facing));
-			if (be instanceof FluidTankBlockEntity tankBe)
-				source = new WeakReference<>(tank = tankBe);
+			if (be instanceof FluidTankBlockEntity) {
+				FluidTankBlockEntity tankBe = (FluidTankBlockEntity) be;
+				source = new WeakReference<>(tankBe);
+				tank = tankBe;
+			}
 		}
 		if (tank == null)
 			return null;
 		return tank.getControllerBE();
-	}
+	}	
 
 }

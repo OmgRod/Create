@@ -31,9 +31,9 @@ import net.minecraftforge.registries.IForgeRegistry;
 
 public class AllTags {
 	public static <T> TagKey<T> optionalTag(IForgeRegistry<T> registry,
-		ResourceLocation id) {
+											ResourceLocation id) {
 		return registry.tags()
-			.createOptionalTagKey(id, Collections.emptySet());
+				.createOptionalTagKey(id, Collections.emptySet());
 	}
 
 	public static <T> TagKey<T> forgeTag(IForgeRegistry<T> registry, String path) {
@@ -147,11 +147,11 @@ public class AllTags {
 		@SuppressWarnings("deprecation")
 		public boolean matches(Block block) {
 			return block.builtInRegistryHolder()
-				.is(tag);
+					.is(tag);
 		}
 
 		public boolean matches(ItemStack stack) {
-			return stack != null && stack.getItem() instanceof BlockItem blockItem && matches(blockItem.getBlock());
+			return stack != null && stack.getItem() instanceof BlockItem && matches(((BlockItem) stack.getItem()).getBlock());
 		}
 
 		public boolean matches(BlockState state) {
@@ -231,7 +231,7 @@ public class AllTags {
 		@SuppressWarnings("deprecation")
 		public boolean matches(Item item) {
 			return item.builtInRegistryHolder()
-				.is(tag);
+					.is(tag);
 		}
 
 		public boolean matches(ItemStack stack) {

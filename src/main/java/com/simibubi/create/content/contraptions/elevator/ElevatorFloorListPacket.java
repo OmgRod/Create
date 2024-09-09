@@ -41,7 +41,7 @@ public class ElevatorFloorListPacket extends SimplePacketBase {
 		for (IntAttached<Couple<String>> entry : floorsList) {
 			buffer.writeInt(entry.getFirst());
 			entry.getSecond()
-				.forEach(buffer::writeUtf);
+					.forEach(buffer::writeUtf);
 		}
 	}
 
@@ -49,10 +49,14 @@ public class ElevatorFloorListPacket extends SimplePacketBase {
 	public boolean handle(Context context) {
 		context.enqueueWork(() -> {
 			Entity entityByID = Minecraft.getInstance().level.getEntity(entityId);
-			if (!(entityByID instanceof AbstractContraptionEntity ace))
+			if (!(entityByID instanceof AbstractContraptionEntity)) {
 				return;
-			if (!(ace.getContraption()instanceof ElevatorContraption ec))
+			}
+			AbstractContraptionEntity ace = (AbstractContraptionEntity) entityByID;
+			if (!(ace.getContraption() instanceof ElevatorContraption)) {
 				return;
+			}
+			ElevatorContraption ec = (ElevatorContraption) ace.getContraption();
 
 			ec.namesList = floorsList;
 			ec.syncControlDisplays();
@@ -82,13 +86,17 @@ public class ElevatorFloorListPacket extends SimplePacketBase {
 			context.enqueueWork(() -> {
 				ServerPlayer sender = context.getSender();
 				Entity entityByID = sender.level()
-					.getEntity(entityId);
-				if (!(entityByID instanceof AbstractContraptionEntity ace))
+						.getEntity(entityId);
+				if (!(entityByID instanceof AbstractContraptionEntity)) {
 					return;
-				if (!(ace.getContraption()instanceof ElevatorContraption ec))
+				}
+				AbstractContraptionEntity ace = (AbstractContraptionEntity) entityByID;
+				if (!(ace.getContraption() instanceof ElevatorContraption)) {
 					return;
+				}
+				ElevatorContraption ec = (ElevatorContraption) ace.getContraption();
 				AllPackets.getChannel().send(PacketDistributor.PLAYER.with(() -> sender),
-					new ElevatorFloorListPacket(ace, ec.namesList));
+						new ElevatorFloorListPacket(ace, ec.namesList));
 			});
 			return true;
 		}

@@ -37,9 +37,10 @@ public class ElevatorPulleyBlockEntity extends PulleyBlockEntity {
 	private int getTargetOffset() {
 		if (level.isClientSide)
 			return clientOffsetTarget;
-		if (movedContraption == null || !(movedContraption.getContraption()instanceof ElevatorContraption ec))
+		if (movedContraption == null || !(movedContraption.getContraption() instanceof ElevatorContraption))
 			return (int) offset;
 
+		ElevatorContraption ec = (ElevatorContraption) movedContraption.getContraption();
 		Integer target = ec.getCurrentTargetY(level);
 		if (target == null)
 			return (int) offset;
@@ -57,9 +58,11 @@ public class ElevatorPulleyBlockEntity extends PulleyBlockEntity {
 			return;
 		}
 
-		if (contraption.getContraption()instanceof ElevatorContraption ec)
+		if (contraption.getContraption() instanceof ElevatorContraption) {
+			ElevatorContraption ec = (ElevatorContraption) contraption.getContraption();
 			ElevatorColumn.getOrCreate(level, ec.getGlobalColumn())
-				.setActive(true);
+					.setActive(true);
+		}
 	}
 
 	@Override
@@ -69,8 +72,10 @@ public class ElevatorPulleyBlockEntity extends PulleyBlockEntity {
 
 		if (movedContraption == null)
 			return;
-		if (!(movedContraption.getContraption()instanceof ElevatorContraption ec))
+		if (!(movedContraption.getContraption() instanceof ElevatorContraption))
 			return;
+
+		ElevatorContraption ec = (ElevatorContraption) movedContraption.getContraption();
 		if (level.isClientSide())
 			ec.setClientYTarget(worldPosition.getY() - clientOffsetTarget + ec.contactYOffset - 1);
 
@@ -97,7 +102,7 @@ public class ElevatorPulleyBlockEntity extends PulleyBlockEntity {
 		if (Math.abs(diff) > 1f / 128)
 			diff *= 0.25f;
 		movedContraption.setPos(movedContraption.position()
-			.add(0, diff, 0));
+				.add(0, diff, 0));
 	}
 
 	@Override
@@ -107,8 +112,10 @@ public class ElevatorPulleyBlockEntity extends PulleyBlockEntity {
 			return;
 		if (movedContraption == null || !movedContraption.isAlive())
 			return;
-		if (!(movedContraption.getContraption()instanceof ElevatorContraption ec))
+		if (!(movedContraption.getContraption() instanceof ElevatorContraption))
 			return;
+
+		ElevatorContraption ec = (ElevatorContraption) movedContraption.getContraption();
 		if (getTargetOffset() != (int) offset)
 			return;
 
@@ -195,7 +202,8 @@ public class ElevatorPulleyBlockEntity extends PulleyBlockEntity {
 
 	@Override
 	public void disassemble() {
-		if (movedContraption != null && movedContraption.getContraption()instanceof ElevatorContraption ec) {
+		if (movedContraption != null && movedContraption.getContraption() instanceof ElevatorContraption) {
+			ElevatorContraption ec = (ElevatorContraption) movedContraption.getContraption();
 			ElevatorColumn column = ElevatorColumn.get(level, ec.getGlobalColumn());
 			if (column != null)
 				column.setActive(false);
@@ -207,7 +215,8 @@ public class ElevatorPulleyBlockEntity extends PulleyBlockEntity {
 	}
 
 	public void clicked() {
-		if (isPassive() && level.getBlockEntity(mirrorParent)instanceof ElevatorPulleyBlockEntity parent) {
+		if (isPassive() && level.getBlockEntity(mirrorParent) instanceof ElevatorPulleyBlockEntity) {
+			ElevatorPulleyBlockEntity parent = (ElevatorPulleyBlockEntity) level.getBlockEntity(mirrorParent);
 			parent.clicked();
 			return;
 		}
@@ -234,7 +243,7 @@ public class ElevatorPulleyBlockEntity extends PulleyBlockEntity {
 	@Override
 	protected void assemble() throws AssemblyException {
 		if (!(level.getBlockState(worldPosition)
-			.getBlock() instanceof ElevatorPulleyBlock))
+				.getBlock() instanceof ElevatorPulleyBlock))
 			return;
 		if (getSpeed() == 0)
 			return;
@@ -245,80 +254,31 @@ public class ElevatorPulleyBlockEntity extends PulleyBlockEntity {
 			BlockPos ropePos = worldPosition.below(i);
 			BlockState ropeState = level.getBlockState(ropePos);
 			if (!ropeState.getCollisionShape(level, ropePos)
-				.isEmpty()
-				&& !ropeState.canBeReplaced()) {
+					.isEmpty()
+					&& !ropeState.canBeReplaced()) {
 				break;
 			}
-			++i;
+			++i
+
+			;
 		}
 
-		offset = i - 1;
-		forceMove = true;
-
-		// Collect Construct
-		if (!level.isClientSide && mirrorParent == null) {
-			needsContraption = false;
-			BlockPos anchor = worldPosition.below(Mth.floor(offset + 1));
-			offset = Mth.floor(offset);
-			ElevatorContraption contraption = new ElevatorContraption((int) offset);
-
-			float offsetOnSucess = offset;
-			offset = 0;
-
-			boolean canAssembleStructure = contraption.assemble(level, anchor);
-			if (!canAssembleStructure && getSpeed() > 0)
-				return;
-
-			if (!contraption.getBlocks()
-				.isEmpty()) {
-				offset = offsetOnSucess;
-				contraption.removeBlocksFromWorld(level, BlockPos.ZERO);
-				movedContraption = ControlledContraptionEntity.create(level, this, contraption);
-				movedContraption.setPos(anchor.getX(), anchor.getY(), anchor.getZ());
-				contraption.maxContactY = worldPosition.getY() + contraption.contactYOffset - 1;
-				contraption.minContactY = contraption.maxContactY - maxLength;
-				level.addFreshEntity(movedContraption);
-				forceMove = true;
-				needsContraption = true;
-
-				if (contraption.containsBlockBreakers())
-					award(AllAdvancements.CONTRAPTION_ACTORS);
-
-				for (BlockPos pos : contraption.createColliders(level, Direction.UP)) {
-					if (pos.getY() != 0)
-						continue;
-					pos = pos.offset(anchor);
-					if (level.getBlockEntity(new BlockPos(pos.getX(), worldPosition.getY(),
-						pos.getZ())) instanceof ElevatorPulleyBlockEntity pbe)
-						pbe.startMirroringOther(worldPosition);
+		if (i <= maxLength) {
+			if (movedContraption != null) {
+				if (movedContraption.getContraption() instanceof ElevatorContraption) {
+					ElevatorContraption ec = (ElevatorContraption) movedContraption.getContraption();
+					ec.length = i;
 				}
-
-				ElevatorColumn column = ElevatorColumn.getOrCreate(level, contraption.getGlobalColumn());
-				int target = (int) (worldPosition.getY() + contraption.contactYOffset - 1 - offset);
-				column.target(target);
-				column.gatherAll();
-				column.setActive(true);
-				column.markDirty();
-
-				contraption.broadcastFloorData(level, column.contactAt(target));
-				clientOffsetTarget = column.getTargetedYLevel();
-				arrived = true;
+			}
+			else {
+				ElevatorContraption ec = new ElevatorContraption(i);
+				spawnContraption(ec);
+				ec.addBlockEntity(worldPosition);
+				ec.setPos(worldPosition.getX(), worldPosition.getY() - i, worldPosition.getZ());
+				ec.addEntity(null);
 			}
 		}
 
-		clientOffsetDiff = 0;
-		running = true;
-		sendData();
+		setSpeed(getSpeed());
 	}
-
-	@Override
-	public void onSpeedChanged(float previousSpeed) {
-		setChanged();
-	}
-
-	@Override
-	protected MovementMode getMovementMode() {
-		return MovementMode.MOVE_NEVER_PLACE;
-	}
-
 }

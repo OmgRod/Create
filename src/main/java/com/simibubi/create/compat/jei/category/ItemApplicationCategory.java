@@ -43,10 +43,10 @@ public class ItemApplicationCategory extends CreateRecipeCategory<ItemApplicatio
 				.setBackground(getRenderedSlot(), -1, -1)
 				.addIngredients(recipe.getRequiredHeldItem())
 				.addTooltipCallback(
-					recipe.shouldKeepHeldItem()
-						? (view, tooltip) -> tooltip.add(1, Lang.translateDirect("recipe.deploying.not_consumed")
-							.withStyle(ChatFormatting.GOLD))
-						: (view, tooltip) -> {}
+						recipe.shouldKeepHeldItem()
+								? (view, tooltip) -> tooltip.add(1, Lang.translateDirect("recipe.deploying.not_consumed")
+								.withStyle(ChatFormatting.GOLD))
+								: (view, tooltip) -> {}
 				);
 
 		List<ProcessingOutput> results = recipe.getRollableResults();
@@ -56,9 +56,9 @@ public class ItemApplicationCategory extends CreateRecipeCategory<ItemApplicatio
 			int xOffset = i % 2 == 0 ? 0 : 19;
 			int yOffset = (i / 2) * -19;
 			builder.addSlot(RecipeIngredientRole.OUTPUT, single ? 132 : 132 + xOffset, 38 + yOffset)
-				.setBackground(getRenderedSlot(output), -1, -1)
-				.addItemStack(output.getStack())
-				.addTooltipCallback(addStochasticTooltip(output));
+					.setBackground(getRenderedSlot(output), -1, -1)
+					.addItemStack(output.getStack())
+					.addTooltipCallback(addStochasticTooltip(output));
 		}
 	}
 
@@ -68,18 +68,17 @@ public class ItemApplicationCategory extends CreateRecipeCategory<ItemApplicatio
 		AllGuiTextures.JEI_DOWN_ARROW.render(graphics, 74, 10);
 
 		Optional<ItemStack> displayedIngredient = recipeSlotsView.getSlotViews()
-			.get(0)
-			.getDisplayedIngredient(VanillaTypes.ITEM_STACK);
+				.get(0)
+				.getDisplayedIngredient(VanillaTypes.ITEM_STACK);
 		if (displayedIngredient.isEmpty())
 			return;
 
-		Item item = displayedIngredient.get()
-			.getItem();
-		if (!(item instanceof BlockItem blockItem))
+		Item item = displayedIngredient.get().getItem();
+		if (!(item instanceof BlockItem))
 			return;
 
-		BlockState state = blockItem.getBlock()
-			.defaultBlockState();
+		BlockItem blockItem = (BlockItem) item;
+		BlockState state = blockItem.getBlock().defaultBlockState();
 
 		PoseStack matrixStack = graphics.pose();
 		matrixStack.pushPose();
@@ -89,11 +88,10 @@ public class ItemApplicationCategory extends CreateRecipeCategory<ItemApplicatio
 		int scale = 20;
 
 		GuiGameElement.of(state)
-			.lighting(AnimatedKinetics.DEFAULT_LIGHTING)
-			.scale(scale)
-			.render(graphics);
+				.lighting(AnimatedKinetics.DEFAULT_LIGHTING)
+				.scale(scale)
+				.render(graphics);
 
 		matrixStack.popPose();
 	}
-
 }

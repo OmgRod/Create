@@ -66,8 +66,13 @@ public class BearingContraption extends Contraption {
 
 	private BlockState getSailBlock(Pair<StructureBlockInfo, BlockEntity> capture) {
 		BlockState state = capture.getKey().state();
-		if (AllBlocks.COPYCAT_PANEL.has(state) && capture.getRight() instanceof CopycatBlockEntity cbe)
-			return cbe.getMaterial();
+		if (AllBlocks.COPYCAT_PANEL.has(state)) {
+			BlockEntity blockEntity = capture.getRight();
+			if (blockEntity instanceof CopycatBlockEntity) {
+				CopycatBlockEntity cbe = (CopycatBlockEntity) blockEntity;
+				return cbe.getMaterial();
+			}
+		}
 		return state;
 	}
 
@@ -100,5 +105,4 @@ public class BearingContraption extends Contraption {
 			return false;
 		return facing.getAxis() == this.facing.getAxis();
 	}
-
 }

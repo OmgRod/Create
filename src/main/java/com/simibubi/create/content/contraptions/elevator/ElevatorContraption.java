@@ -39,7 +39,7 @@ public class ElevatorContraption extends PulleyContraption {
 	private int namesListVersion = -1;
 	public List<IntAttached<Couple<String>>> namesList = ImmutableList.of();
 	public int clientYTarget;
-	
+
 	public int maxContactY;
 	public int minContactY;
 
@@ -72,7 +72,7 @@ public class ElevatorContraption extends PulleyContraption {
 		namesList = column.compileNamesList();
 		namesListVersion = column.namesListVersion;
 		AllPackets.getChannel().send(PacketDistributor.TRACKING_ENTITY.with(() -> entity),
-			new ElevatorFloorListPacket(entity, namesList));
+				new ElevatorFloorListPacket(entity, namesList));
 	}
 
 	@Override
@@ -94,7 +94,7 @@ public class ElevatorContraption extends PulleyContraption {
 			return null;
 		return targetedYLevel;
 	}
-	
+
 	public boolean isTargetUnreachable(int contactY) {
 		return contactY < minContactY || contactY > maxContactY;
 	}
@@ -109,11 +109,11 @@ public class ElevatorContraption extends PulleyContraption {
 			throw new AssemblyException(Lang.translateDirect("gui.assembly.exception.no_contacts"));
 		if (contacts > 1)
 			throw new AssemblyException(Lang.translateDirect("gui.assembly.exception.too_many_contacts"));
-		
+
 		ElevatorColumn column = ElevatorColumn.get(world, getGlobalColumn());
 		if (column != null && column.isActive())
 			throw new AssemblyException(Lang.translateDirect("gui.assembly.exception.column_conflict"));
-		
+
 		startMoving(world);
 		return true;
 	}
@@ -143,8 +143,11 @@ public class ElevatorContraption extends PulleyContraption {
 
 	public void broadcastFloorData(Level level, BlockPos contactPos) {
 		ElevatorColumn column = ElevatorColumn.get(level, getGlobalColumn());
-		if (!(world.getBlockEntity(contactPos) instanceof ElevatorContactBlockEntity ecbe))
+		BlockEntity blockEntity = world.getBlockEntity(contactPos);
+		if (!(blockEntity instanceof ElevatorContactBlockEntity)) {
 			return;
+		}
+		ElevatorContactBlockEntity ecbe = (ElevatorContactBlockEntity) blockEntity;
 		if (column != null)
 			column.floorReached(level, ecbe.shortName);
 	}
@@ -188,14 +191,17 @@ public class ElevatorContraption extends PulleyContraption {
 			return;
 		for (int i = 0; i < namesList.size(); i++)
 			if (namesList.get(i)
-				.getFirst() == clientYTarget)
+					.getFirst() == clientYTarget)
 				setAllControlsToFloor(i);
 	}
 
 	public void setAllControlsToFloor(int floorIndex) {
-		for (MutablePair<StructureBlockInfo, MovementContext> pair : actors)
-			if (pair.right != null && pair.right.temporaryData instanceof ElevatorFloorSelection efs)
+		for (MutablePair<StructureBlockInfo, MovementContext> pair : actors) {
+			if (pair.right != null && pair.right.temporaryData instanceof ElevatorFloorSelection) {
+				ElevatorFloorSelection efs = (ElevatorFloorSelection) pair.right.temporaryData;
 				efs.currentIndex = floorIndex;
+			}
+		}
 	}
 
 }

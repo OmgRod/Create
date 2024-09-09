@@ -32,169 +32,187 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemp
 import net.minecraft.world.phys.Vec3;
 
 public class SlidingDoorMovementBehaviour implements MovementBehaviour {
-	@Override
-	public boolean mustTickWhileDisabled() {
-		return true;
-	}
+    @Override
+    public boolean mustTickWhileDisabled() {
+        return true;
+    }
 
-	@Override
-	public void tick(MovementContext context) {
-		StructureBlockInfo structureBlockInfo = context.contraption.getBlocks()
-			.get(context.localPos);
-		if (structureBlockInfo == null)
-			return;
-		boolean open = SlidingDoorBlockEntity.isOpen(structureBlockInfo.state());
+    @Override
+    public void tick(MovementContext context) {
+        StructureBlockInfo structureBlockInfo = context.contraption.getBlocks()
+            .get(context.localPos);
+        if (structureBlockInfo == null)
+            return;
+        boolean open = SlidingDoorBlockEntity.isOpen(structureBlockInfo.state());
 
-		if (!context.world.isClientSide())
-			tickOpen(context, open);
+        if (!context.world.isClientSide())
+            tickOpen(context, open);
 
-		Map<BlockPos, BlockEntity> tes = context.contraption.presentBlockEntities;
-		if (!(tes.get(context.localPos) instanceof SlidingDoorBlockEntity sdbe))
-			return;
-		boolean wasSettled = sdbe.animation.settled();
-		sdbe.animation.chase(open ? 1 : 0, .15f, Chaser.LINEAR);
-		sdbe.animation.tickChaser();
+        Map<BlockPos, BlockEntity> tes = context.contraption.presentBlockEntities;
+        BlockEntity blockEntity = tes.get(context.localPos);
+        if (!(blockEntity instanceof SlidingDoorBlockEntity)) {
+            return;
+        }
+        SlidingDoorBlockEntity sdbe = (SlidingDoorBlockEntity) blockEntity;
+        boolean wasSettled = sdbe.animation.settled();
+        sdbe.animation.chase(open ? 1 : 0, .15f, Chaser.LINEAR);
+        sdbe.animation.tickChaser();
 
-		if (!wasSettled && sdbe.animation.settled() && !open)
-			context.world.playLocalSound(context.position.x, context.position.y, context.position.z,
-				SoundEvents.IRON_DOOR_CLOSE, SoundSource.BLOCKS, .125f, 1, false);
-	}
+        if (!wasSettled && sdbe.animation.settled() && !open)
+            context.world.playLocalSound(context.position.x, context.position.y, context.position.z,
+                SoundEvents.IRON_DOOR_CLOSE, SoundSource.BLOCKS, .125f, 1, false);
+    }
 
-	protected void tickOpen(MovementContext context, boolean currentlyOpen) {
-		boolean shouldOpen = shouldOpen(context);
-		if (!shouldUpdate(context, shouldOpen))
-			return;
-		if (currentlyOpen == shouldOpen)
-			return;
+    protected void tickOpen(MovementContext context, boolean currentlyOpen) {
+        boolean shouldOpen = shouldOpen(context);
+        if (!shouldUpdate(context, shouldOpen))
+            return;
+        if (currentlyOpen == shouldOpen)
+            return;
 
-		BlockPos pos = context.localPos;
-		Contraption contraption = context.contraption;
+        BlockPos pos = context.localPos;
+        Contraption contraption = context.contraption;
 
-		StructureBlockInfo info = contraption.getBlocks()
-			.get(pos);
-		if (info == null || !info.state().hasProperty(DoorBlock.OPEN))
-			return;
+        StructureBlockInfo info = contraption.getBlocks()
+            .get(pos);
+        if (info == null || !info.state().hasProperty(DoorBlock.OPEN))
+            return;
 
-		toggleDoor(pos, contraption, info);
+        toggleDoor(pos, contraption, info);
 
-		if (shouldOpen)
-			context.world.playSound(null, BlockPos.containing(context.position), SoundEvents.IRON_DOOR_OPEN,
-				SoundSource.BLOCKS, .125f, 1);
-	}
+        if (shouldOpen)
+            context.world.playSound(null, BlockPos.containing(context.position), SoundEvents.IRON_DOOR_OPEN,
+                SoundSource.BLOCKS, .125f, 1);
+    }
 
-	private void toggleDoor(BlockPos pos, Contraption contraption, StructureBlockInfo info) {
-		BlockState newState = info.state().cycle(DoorBlock.OPEN);
-		contraption.entity.setBlock(pos, new StructureBlockInfo(info.pos(), newState, info.nbt()));
+    private void toggleDoor(BlockPos pos, Contraption contraption, StructureBlockInfo info) {
+        BlockState newState = info.state().cycle(DoorBlock.OPEN);
+        contraption.entity.setBlock(pos, new StructureBlockInfo(info.pos(), newState, info.nbt()));
 
-		BlockPos otherPos = newState.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER ? pos.above() : pos.below();
-		info = contraption.getBlocks()
-			.get(otherPos);
-		if (info != null && info.state().hasProperty(DoorBlock.OPEN)) {
-			newState = info.state().cycle(DoorBlock.OPEN);
-			contraption.entity.setBlock(otherPos, new StructureBlockInfo(info.pos(), newState, info.nbt()));
-			contraption.invalidateColliders();
-		}
-	}
+        BlockPos otherPos = newState.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER ? pos.above() : pos.below();
+        info = contraption.getBlocks()
+            .get(otherPos);
+        if (info != null && info.state().hasProperty(DoorBlock.OPEN)) {
+            newState = info.state().cycle(DoorBlock.OPEN);
+            contraption.entity.setBlock(otherPos, new StructureBlockInfo(info.pos(), newState, info.nbt()));
+            contraption.invalidateColliders();
+        }
+    }
 
-	protected boolean shouldUpdate(MovementContext context, boolean shouldOpen) {
-		if (context.firstMovement && shouldOpen)
-			return false;
-		if (!context.data.contains("Open")) {
-			context.data.putBoolean("Open", shouldOpen);
-			return true;
-		}
-		boolean wasOpen = context.data.getBoolean("Open");
-		context.data.putBoolean("Open", shouldOpen);
-		return wasOpen != shouldOpen;
-	}
+    protected boolean shouldUpdate(MovementContext context, boolean shouldOpen) {
+        if (context.firstMovement && shouldOpen)
+            return false;
+        if (!context.data.contains("Open")) {
+            context.data.putBoolean("Open", shouldOpen);
+            return true;
+        }
+        boolean wasOpen = context.data.getBoolean("Open");
+        context.data.putBoolean("Open", shouldOpen);
+        return wasOpen != shouldOpen;
+    }
 
-	protected boolean shouldOpen(MovementContext context) {
-		if (context.disabled)
-			return false;
-		Contraption contraption = context.contraption;
-		boolean canOpen = context.motion.length() < 1 / 128f && !contraption.entity.isStalled()
-			|| contraption instanceof ElevatorContraption ec && ec.arrived;
+    protected boolean shouldOpen(MovementContext context) {
+        if (context.disabled)
+            return false;
+        Contraption contraption = context.contraption;
+        boolean canOpen = context.motion.length() < 1 / 128f && !contraption.entity.isStalled();
+        if (contraption instanceof ElevatorContraption) {
+            ElevatorContraption ec = (ElevatorContraption) contraption;
+            canOpen = canOpen || ec.arrived;
+        }
 
-		if (!canOpen) {
-			context.temporaryData = null;
-			return false;
-		}
+        if (!canOpen) {
+            context.temporaryData = null;
+            return false;
+        }
 
-		if (context.temporaryData instanceof WeakReference<?> wr && wr.get()instanceof DoorControlBehaviour dcb)
-			if (dcb.blockEntity != null && !dcb.blockEntity.isRemoved())
-				return shouldOpenAt(dcb, context);
+        if (context.temporaryData instanceof WeakReference<?>) {
+            WeakReference<?> wr = (WeakReference<?>) context.temporaryData;
+            Object tempData = wr.get();
+            if (tempData instanceof DoorControlBehaviour) {
+                DoorControlBehaviour dcb = (DoorControlBehaviour) tempData;
+                if (dcb.blockEntity != null && !dcb.blockEntity.isRemoved()) {
+                    return shouldOpenAt(dcb, context);
+                }
+            }
+        }
 
-		context.temporaryData = null;
-		DoorControlBehaviour doorControls = null;
+        context.temporaryData = null;
+        DoorControlBehaviour doorControls = null;
 
-		if (contraption instanceof ElevatorContraption ec)
-			doorControls = getElevatorDoorControl(ec, context);
-		if (context.contraption.entity instanceof CarriageContraptionEntity cce)
-			doorControls = getTrainStationDoorControl(cce, context);
+        if (contraption instanceof ElevatorContraption) {
+            ElevatorContraption ec = (ElevatorContraption) contraption;
+            doorControls = getElevatorDoorControl(ec, context);
+        }
+        if (context.contraption.entity instanceof CarriageContraptionEntity) {
+            CarriageContraptionEntity cce = (CarriageContraptionEntity) context.contraption.entity;
+            doorControls = getTrainStationDoorControl
 
-		if (doorControls == null)
-			return false;
+(cce, context);
+        }
 
-		context.temporaryData = new WeakReference<>(doorControls);
-		return shouldOpenAt(doorControls, context);
-	}
+        if (doorControls == null)
+            return false;
 
-	protected boolean shouldOpenAt(DoorControlBehaviour controller, MovementContext context) {
-		if (controller.mode == DoorControl.ALL)
-			return true;
-		if (controller.mode == DoorControl.NONE)
-			return false;
-		return controller.mode.matches(getDoorFacing(context));
-	}
+        context.temporaryData = new WeakReference<>(doorControls);
+        return shouldOpenAt(doorControls, context);
+    }
 
-	protected DoorControlBehaviour getElevatorDoorControl(ElevatorContraption ec, MovementContext context) {
-		Integer currentTargetY = ec.getCurrentTargetY(context.world);
-		if (currentTargetY == null)
-			return null;
-		ColumnCoords columnCoords = ec.getGlobalColumn();
-		if (columnCoords == null)
-			return null;
-		ElevatorColumn elevatorColumn = ElevatorColumn.get(context.world, columnCoords);
-		if (elevatorColumn == null)
-			return null;
-		return BlockEntityBehaviour.get(context.world, elevatorColumn.contactAt(currentTargetY),
-			DoorControlBehaviour.TYPE);
-	}
+    protected boolean shouldOpenAt(DoorControlBehaviour controller, MovementContext context) {
+        if (controller.mode == DoorControl.ALL)
+            return true;
+        if (controller.mode == DoorControl.NONE)
+            return false;
+        return controller.mode.matches(getDoorFacing(context));
+    }
 
-	protected DoorControlBehaviour getTrainStationDoorControl(CarriageContraptionEntity cce, MovementContext context) {
-		Carriage carriage = cce.getCarriage();
-		if (carriage == null || carriage.train == null)
-			return null;
-		GlobalStation currentStation = carriage.train.getCurrentStation();
-		if (currentStation == null)
-			return null;
+    protected DoorControlBehaviour getElevatorDoorControl(ElevatorContraption ec, MovementContext context) {
+        Integer currentTargetY = ec.getCurrentTargetY(context.world);
+        if (currentTargetY == null)
+            return null;
+        ColumnCoords columnCoords = ec.getGlobalColumn();
+        if (columnCoords == null)
+            return null;
+        ElevatorColumn elevatorColumn = ElevatorColumn.get(context.world, columnCoords);
+        if (elevatorColumn == null)
+            return null;
+        return BlockEntityBehaviour.get(context.world, elevatorColumn.contactAt(currentTargetY),
+            DoorControlBehaviour.TYPE);
+    }
 
-		BlockPos stationPos = currentStation.getBlockEntityPos();
-		ResourceKey<Level> stationDim = currentStation.getBlockEntityDimension();
-		MinecraftServer server = context.world.getServer();
-		if (server == null)
-			return null;
-		ServerLevel stationLevel = server.getLevel(stationDim);
-		if (stationLevel == null || !stationLevel.isLoaded(stationPos))
-			return null;
-		return BlockEntityBehaviour.get(stationLevel, stationPos, DoorControlBehaviour.TYPE);
-	}
+    protected DoorControlBehaviour getTrainStationDoorControl(CarriageContraptionEntity cce, MovementContext context) {
+        Carriage carriage = cce.getCarriage();
+        if (carriage == null || carriage.train == null)
+            return null;
+        GlobalStation currentStation = carriage.train.getCurrentStation();
+        if (currentStation == null)
+            return null;
 
-	protected Direction getDoorFacing(MovementContext context) {
-		Direction stateFacing = context.state.getValue(DoorBlock.FACING);
-		Direction originalFacing = Direction.get(AxisDirection.POSITIVE, stateFacing.getAxis());
-		Vec3 centerOfContraption = context.contraption.bounds.getCenter();
-		Vec3 diff = Vec3.atCenterOf(context.localPos)
-			.add(Vec3.atLowerCornerOf(stateFacing.getNormal())
-				.scale(-.45f))
-			.subtract(centerOfContraption);
-		if (originalFacing.getAxis()
-			.choose(diff.x, diff.y, diff.z) < 0)
-			originalFacing = originalFacing.getOpposite();
+        BlockPos stationPos = currentStation.getBlockEntityPos();
+        ResourceKey<Level> stationDim = currentStation.getBlockEntityDimension();
+        MinecraftServer server = context.world.getServer();
+        if (server == null)
+            return null;
+        ServerLevel stationLevel = server.getLevel(stationDim);
+        if (stationLevel == null || !stationLevel.isLoaded(stationPos))
+            return null;
+        return BlockEntityBehaviour.get(stationLevel, stationPos, DoorControlBehaviour.TYPE);
+    }
 
-		Vec3 directionVec = Vec3.atLowerCornerOf(originalFacing.getNormal());
-		directionVec = context.rotation.apply(directionVec);
-		return Direction.getNearest(directionVec.x, directionVec.y, directionVec.z);
-	}
+    protected Direction getDoorFacing(MovementContext context) {
+        Direction stateFacing = context.state.getValue(DoorBlock.FACING);
+        Direction originalFacing = Direction.get(AxisDirection.POSITIVE, stateFacing.getAxis());
+        Vec3 centerOfContraption = context.contraption.bounds.getCenter();
+        Vec3 diff = Vec3.atCenterOf(context.localPos)
+            .add(Vec3.atLowerCornerOf(stateFacing.getNormal())
+                .scale(-.45f))
+            .subtract(centerOfContraption);
+        if (originalFacing.getAxis()
+            .choose(diff.x, diff.y, diff.z) < 0)
+            originalFacing = originalFacing.getOpposite();
 
+        Vec3 directionVec = Vec3.atLowerCornerOf(originalFacing.getNormal());
+        directionVec = context.rotation.apply(directionVec);
+        return Direction.getNearest(directionVec.x, directionVec.y, directionVec.z);
+    }
 }

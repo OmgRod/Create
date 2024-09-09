@@ -85,8 +85,8 @@ dependencies {
     minecraft 'net.minecraftforge:forge:1.12.2-14.23.5.2859'
 
     // Example dependencies for JEI, if required for the mod
-    compileOnly fg.deobf("mezz.jei:jei-1.12.2:4.15.0.268:api")
-    runtimeOnly fg.deobf("mezz.jei:jei-1.12.2:4.15.0.268")
+    compileOnly fg.deobf("mezz.jei:jei_1.12.2:4.16.1.1012:api")
+    runtimeOnly fg.deobf("mezz.jei:jei_1.12.2:4.16.1.1012")
 
     // Uncomment and add other runtime dependencies here if needed
     // runtimeOnly fg.deobf("vazkii.arl:AutoRegLib:1.3-24")
